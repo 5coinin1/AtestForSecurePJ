@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 import requests
 
 # Địa chỉ server (thay bằng URL Render của bạn)
-SERVER_URL = "https://your-app.onrender.com"
+SERVER_URL = "https://atestforsecurepj.onrender.com"
 
 # Upload file lên server
 def upload_file():
