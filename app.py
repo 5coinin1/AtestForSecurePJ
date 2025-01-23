@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, send_from_directory
+from flask import Flask, request, render_template, send_from_directory, jsonify
 import os
 
 app = Flask(__name__)
@@ -30,6 +30,15 @@ def upload_file():
 @app.route('/download/<filename>')
 def download_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
+
+# Liệt kê file đã upload
+@app.route('/files', methods=['GET'])
+def list_files():
+    try:
+        files = os.listdir(app.config['UPLOAD_FOLDER'])
+        return jsonify(files)
+    except Exception as e:
+        return str(e), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
