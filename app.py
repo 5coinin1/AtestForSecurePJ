@@ -59,7 +59,8 @@ def upload_file():
     db.session.add(file_record)
     db.session.commit()
 
-    return jsonify({"message": "Tải lên thành công", "key": key})
+    # Trả về phản hồi với key
+    return jsonify({"message": "File đã được tải lên thành công", "key": key})
 
 @app.route('/download', methods=['GET'])
 def download_file():
