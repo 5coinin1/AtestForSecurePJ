@@ -83,7 +83,7 @@ def download_file():
         return jsonify({"error": "Không tìm thấy file với key này"}), 404
 
     # Trả về file
-    return send_file(file_record.file_path)
+    return send_file(file_record.file_path, as_attachment=True, download_name=file_record.file_name)
 
 @app.route('/client', methods=['GET', 'POST'])
 def client():
@@ -114,26 +114,6 @@ def client():
         </form>
     '''
 
-@app.route('/files', methods=['GET'])
-def list_files():
-    """
-    Liệt kê tất cả các file đã được tải lên server
-    """
-    files = FileRecord.query.all()
-    if not files:
-        return jsonify({"message": "Không có file nào được tải lên"}), 404
-
-    file_list = []
-    for file in files:
-        file_list.append({
-            "id": file.id,
-            "file_name": file.file_name,
-            "key": file.key,
-            "last_updated": file.last_updated
-        })
-
-    return jsonify({"files": file_list})
-
 @app.route('/')
 def index():
     """
@@ -144,7 +124,6 @@ def index():
         <p>Chào mừng bạn đến với ứng dụng quản lý file của chúng tôi!</p>
         <ul>
             <li><a href="/client">Tải lên file</a></li>
-            <li><a href="/files">Xem danh sách file</a></li>
             <li><a href="/download?key=YOUR_KEY_HERE">Tải xuống file bằng key</a></li>
         </ul>
     '''
