@@ -1,5 +1,6 @@
 import os
 import hashlib
+from werkzeug.utils import secure_filename
 from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
@@ -35,11 +36,12 @@ def generate_key():
 def generate_password():
     return hashlib.sha256(os.urandom(16)).hexdigest()
 
+# Đảm bảo xử lý tên file an toàn và hỗ trợ Unicode
+def safe_filename(filename):
+    return secure_filename(filename).encode('utf-8').decode('utf-8')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """
-    API nhận file và tải lên server
-    """
     if 'file' not in request.files:
         return jsonify({"error": "Không có file trong yêu cầu"}), 400
 
@@ -47,19 +49,24 @@ def upload_file():
     if file.filename == '':
         return jsonify({"error": "Không có file được chọn"}), 400
 
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+    # Xử lý tên file an toàn với Unicode
+    safe_name = safe_filename(file.filename)
+    file_path = os.path.join(UPLOAD_FOLDER, safe_name)
+
+    try:
+        file.save(file_path)
+    except Exception as e:
+        return jsonify({"error": f"Lỗi khi lưu file: {str(e)}"}), 500
 
     # Tạo key và mật khẩu cho file
     key = generate_key()
     password = generate_password()
 
     # Lưu thông tin file vào cơ sở dữ liệu
-    file_record = FileRecord(file_name=file.filename, file_path=file_path, password=password, key=key)
+    file_record = FileRecord(file_name=safe_name, file_path=file_path, password=password, key=key)
     db.session.add(file_record)
     db.session.commit()
 
-    # Trả về phản hồi với key
     return jsonify({"message": "File đã được tải lên thành công!", "key": key})
 
 @app.route('/download', methods=['GET'])

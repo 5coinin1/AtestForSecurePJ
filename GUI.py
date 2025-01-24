@@ -52,7 +52,7 @@ def download_file():
 # Tạo giao diện Tkinter
 app = tk.Tk()
 app.title("Ứng dụng Tải lên và Tải xuống File")
-app.geometry("400x200")
+app.geometry("600x300")
 
 # Nút tải lên file
 upload_button = tk.Button(app, text="Tải lên File", command=upload_file)
