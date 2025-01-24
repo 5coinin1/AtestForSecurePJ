@@ -1,6 +1,5 @@
 import os
 import hashlib
-import requests
 from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
@@ -84,15 +83,14 @@ def client():
     Client app - Giao diện tải lên và tải xuống file từ server.
     """
     if request.method == 'POST':
-        file_path = request.form['file_path']
-        if os.path.exists(file_path):
+        # Chỉ cần form upload file, không cần phải dùng requests
+        file = request.files['file']
+        if file:
+            file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+            file.save(file_path)
             # Tải file lên server
-            with open(file_path, 'rb') as file:
-                files = {'file': file}
-                response = requests.post("http://localhost:5000/upload", files=files)
-                return response.json()
-        else:
-            return jsonify({"error": "File không tồn tại"}), 400
+            response = jsonify({"message": "File đã được tải lên thành công"})
+            return response
 
     return '''
         <form method="post" enctype="multipart/form-data">
