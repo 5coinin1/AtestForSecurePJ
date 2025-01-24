@@ -109,6 +109,27 @@ def client():
         </form>
     '''
 
+@app.route('/files', methods=['GET'])
+def list_files():
+    """
+    Liệt kê tất cả các file đã được tải lên server
+    """
+    files = FileRecord.query.all()
+    if not files:
+        return jsonify({"message": "Không có file nào được tải lên"}), 404
+
+    file_list = []
+    for file in files:
+        file_list.append({
+            "id": file.id,
+            "file_name": file.file_name,
+            "key": file.key,
+            "last_updated": file.last_updated
+        })
+
+    return jsonify({"files": file_list})
+
+
 @app.route('/')
 def index():
     """
@@ -122,3 +143,15 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+import requests
+
+@app.route('/connect_to_web', methods=['GET'])
+def connect_to_web():
+    # Gửi yêu cầu GET tới ứng dụng web trên Render
+    response = requests.get('https://atestforsecurepj.onrender.com/some-endpoint')
+
+    # Kiểm tra nếu yêu cầu thành công
+    if response.status_code == 200:
+        return response.json()  # Trả về dữ liệu JSON từ server
+    else:
+        return jsonify({"error": "Không thể kết nối tới web"}), 400
