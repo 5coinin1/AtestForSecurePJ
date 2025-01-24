@@ -89,8 +89,17 @@ def client():
         if file:
             file_path = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(file_path)
-            # Tải file lên server
-            response = jsonify({"message": "File đã được tải lên thành công"})
+            
+            # Tạo key cho file
+            key = generate_key()
+
+            # Lưu thông tin file vào cơ sở dữ liệu (hoặc có thể làm theo logic riêng của bạn)
+            file_record = FileRecord(file_name=file.filename, file_path=file_path, password=generate_password(), key=key)
+            db.session.add(file_record)
+            db.session.commit()
+
+            # Trả về phản hồi với message và key
+            response = jsonify({"message": "File đã được tải lên thành công", "key": key})
             return response
 
     return '''
