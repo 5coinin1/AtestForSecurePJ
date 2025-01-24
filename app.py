@@ -131,7 +131,7 @@ def index():
         <p>Chào mừng bạn đến với ứng dụng quản lý file của chúng tôi!</p>
         <ul>
             <li><a href="/client">Tải lên file</a></li>
-            <li><a href="/download?key=YOUR_KEY_HERE">Tải xuống file bằng key</a></li>
+            <li><a href="/download?key=YOUR_KEY_HERE&password=YOUR_PASSWORD_HERE">Tải xuống file bằng key</a></li>
         </ul>
     '''
 
