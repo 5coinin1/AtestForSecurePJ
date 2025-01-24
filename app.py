@@ -5,9 +5,9 @@ from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
-# Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu
+# Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///files.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://forsecurity_user:t5maPyNZCK4qN5PbZC6KHN7YRugOxaeb@dpg-cu8bq0aj1k6c739t1gt0-a.oregon-postgres.render.com/forsecurity'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
