@@ -100,23 +100,25 @@ def client():
     if request.method == 'POST':
         file = request.files['file']
         if file:
-            # Đường dẫn file gốc trước khi mã hóa
+            # Lưu file tạm thời vào thư mục trên server
             file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-
-            # Mã hóa file
-            encrypted_file_path = file_path + '.enc'
-            password = generate_password()  # Tạo mật khẩu cho file
-            encrypt_file(file_path=file, password=password, output_path=encrypted_file_path)
+            file.save(file_path)
 
             # Tạo key cho file
             key = generate_key()
 
-            # Lưu thông tin file vào cơ sở dữ liệu
+            # Mã hóa file
+            password = generate_password()
+            encrypted_file_path = file_path + '.enc'
+            encrypt_file(file_path=file_path, password=password, output_path=encrypted_file_path)
+
+            # Lưu thông tin vào cơ sở dữ liệu
             file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, password=password, key=key)
             db.session.add(file_record)
             db.session.commit()
 
-            return f"File đã được mã hóa và tải lên thành công! Key: {key} và Password: {password}"
+            # Trả về thông tin file đã upload
+            return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key, "password": password})
 
     return '''
         <form method="post" enctype="multipart/form-data">
