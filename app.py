@@ -5,6 +5,9 @@ from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
+from encryption_utils import encrypt_file
+from encryption_utils import decrypt_file
+
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://forsecurity_user:t5maPyNZCK4qN5PbZC6KHN7YRugOxaeb@dpg-cu8bq0aj1k6c739t1gt0-a.oregon-postgres.render.com/forsecurity'
@@ -49,14 +52,22 @@ def upload_file():
     if file.filename == '':
         return jsonify({"error": "Không có file được chọn"}), 400
 
-    # Xử lý tên file an toàn với Unicode
-    safe_name = safe_filename(file.filename)
-    file_path = os.path.join(UPLOAD_FOLDER, safe_name)
+    # Đường dẫn file mã hóa
+    encrypted_file_path = os.path.join(UPLOAD_FOLDER, file.filename + '.enc')
 
-    try:
-        file.save(file_path)
-    except Exception as e:
-        return jsonify({"error": f"Lỗi khi lưu file: {str(e)}"}), 500
+    # Mã hóa file bằng password
+    password = generate_password()
+    encrypt_file(file_path=file, password=password, output_path=encrypted_file_path)
+
+    # Tạo key cho file
+    key = generate_key()
+
+    # Lưu thông tin file vào cơ sở dữ liệu
+    file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, password=password, key=key)
+    db.session.add(file_record)
+    db.session.commit()
+
+    return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key, "password": password})
 
     # Tạo key và mật khẩu cho file
     key = generate_key()
@@ -71,19 +82,26 @@ def upload_file():
 
 @app.route('/download', methods=['GET'])
 def download_file():
-    """
-    API trả file về cho người dùng qua key đặc biệt
-    """
     file_key = request.args.get('key')
-    if not file_key:
-        return jsonify({"error": "Vui lòng cung cấp key"}), 400
+    password = request.args.get('password')
+
+    if not file_key or not password:
+        return jsonify({"error": "Vui lòng cung cấp key và password"}), 400
 
     file_record = FileRecord.query.filter_by(key=file_key).first()
     if not file_record:
         return jsonify({"error": "Không tìm thấy file với key này"}), 404
 
-    # Trả về file
-    return send_file(file_record.file_path, as_attachment=True, download_name=file_record.file_name)
+    # File giải mã sẽ được tạo tạm thời
+    decrypted_file_path = file_record.file_path.replace('.enc', '.decrypted')
+
+    # Giải mã file
+    try:
+        decrypt_file(file_path=file_record.file_path, password=password, output_path=decrypted_file_path)
+    except Exception as e:
+        return jsonify({"error": "Sai password hoặc file không hợp lệ"}), 403
+
+    return send_file(decrypted_file_path, as_attachment=True)
 
 @app.route('/client', methods=['GET', 'POST'])
 def client():
