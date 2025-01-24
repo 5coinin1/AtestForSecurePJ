@@ -25,7 +25,8 @@ class FileRecord(db.Model):
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Khởi tạo database
-db.create_all()
+with app.app_context():
+    db.create_all()
 
 # Hàm tạo key đặc biệt cho file
 def generate_key():
