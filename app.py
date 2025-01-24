@@ -100,18 +100,23 @@ def client():
     if request.method == 'POST':
         file = request.files['file']
         if file:
+            # Đường dẫn file gốc trước khi mã hóa
             file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-            file.save(file_path)
-            
+
+            # Mã hóa file
+            encrypted_file_path = file_path + '.enc'
+            password = generate_password()  # Tạo mật khẩu cho file
+            encrypt_file(file_path=file, password=password, output_path=encrypted_file_path)
+
             # Tạo key cho file
             key = generate_key()
 
             # Lưu thông tin file vào cơ sở dữ liệu
-            file_record = FileRecord(file_name=file.filename, file_path=file_path, password=generate_password(), key=key)
+            file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, password=password, key=key)
             db.session.add(file_record)
             db.session.commit()
 
-            return f"File đã được tải lên thành công! Key: {key}"
+            return f"File đã được mã hóa và tải lên thành công! Key: {key} và Password: {password}"
 
     return '''
         <form method="post" enctype="multipart/form-data">
@@ -120,6 +125,7 @@ def client():
             <input type="submit" value="Tải lên file" />
         </form>
     '''
+
 
 @app.route('/')
 def index():
