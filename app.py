@@ -69,17 +69,6 @@ def upload_file():
 
     return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key, "password": password})
 
-    # Tạo key và mật khẩu cho file
-    key = generate_key()
-    password = generate_password()
-
-    # Lưu thông tin file vào cơ sở dữ liệu
-    file_record = FileRecord(file_name=safe_name, file_path=file_path, password=password, key=key)
-    db.session.add(file_record)
-    db.session.commit()
-
-    return jsonify({"message": "File đã được tải lên thành công!", "key": key})
-
 @app.route('/download', methods=['GET'])
 def download_file():
     file_key = request.args.get('key')
