@@ -60,7 +60,7 @@ def upload_file():
     db.session.commit()
 
     # Trả về phản hồi với key
-    return jsonify({"message": "File đã được tải lên thành công", "key": key})
+    return jsonify({"message": "File đã được tải lên thành công!", "key": key})
 
 @app.route('/download', methods=['GET'])
 def download_file():
@@ -69,11 +69,11 @@ def download_file():
     """
     file_key = request.args.get('key')
     if not file_key:
-        return jsonify({"error": "Cần cung cấp key"}), 400
+        return jsonify({"error": "Vui lòng cung cấp key"}), 400
 
     file_record = FileRecord.query.filter_by(key=file_key).first()
     if not file_record:
-        return jsonify({"error": "File không tồn tại hoặc key không hợp lệ"}), 404
+        return jsonify({"error": "Không tìm thấy file với key này"}), 404
 
     # Trả về file
     return send_file(file_record.file_path)
@@ -84,7 +84,6 @@ def client():
     Client app - Giao diện tải lên và tải xuống file từ server.
     """
     if request.method == 'POST':
-        # Chỉ cần form upload file, không cần phải dùng requests
         file = request.files['file']
         if file:
             file_path = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -93,18 +92,17 @@ def client():
             # Tạo key cho file
             key = generate_key()
 
-            # Lưu thông tin file vào cơ sở dữ liệu (hoặc có thể làm theo logic riêng của bạn)
+            # Lưu thông tin file vào cơ sở dữ liệu
             file_record = FileRecord(file_name=file.filename, file_path=file_path, password=generate_password(), key=key)
             db.session.add(file_record)
             db.session.commit()
 
-            # Trả về phản hồi với message và key
-            response = jsonify({"message": "File đã được tải lên thành công", "key": key})
-            return response
+            return f"File đã được tải lên thành công! Key: {key}"
 
     return '''
         <form method="post" enctype="multipart/form-data">
-            Chọn file tải lên: <input type="file" name="file" /><br>
+            <label for="file">Chọn file tải lên:</label>
+            <input type="file" name="file" id="file" /><br>
             <input type="submit" value="Tải lên file" />
         </form>
     '''
@@ -129,7 +127,6 @@ def list_files():
 
     return jsonify({"files": file_list})
 
-
 @app.route('/')
 def index():
     """
@@ -137,21 +134,13 @@ def index():
     """
     return '''
         <h1>Ứng dụng Tải Lên và Tải Xuống File</h1>
-        <a href="/client">Tải lên file</a><br>
-        <a href="/download?key=YOUR_KEY_HERE">Tải xuống file bằng key</a><br>
+        <p>Chào mừng bạn đến với ứng dụng quản lý file của chúng tôi!</p>
+        <ul>
+            <li><a href="/client">Tải lên file</a></li>
+            <li><a href="/files">Xem danh sách file</a></li>
+            <li><a href="/download?key=YOUR_KEY_HERE">Tải xuống file bằng key</a></li>
+        </ul>
     '''
 
 if __name__ == '__main__':
     app.run(debug=True)
-import requests
-
-@app.route('/connect_to_web', methods=['GET'])
-def connect_to_web():
-    # Gửi yêu cầu GET tới ứng dụng web trên Render
-    response = requests.get('https://atestforsecurepj.onrender.com/some-endpoint')
-
-    # Kiểm tra nếu yêu cầu thành công
-    if response.status_code == 200:
-        return response.json()  # Trả về dữ liệu JSON từ server
-    else:
-        return jsonify({"error": "Không thể kết nối tới web"}), 400
