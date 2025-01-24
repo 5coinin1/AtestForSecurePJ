@@ -1,27 +1,15 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import requests
+import sys
+import io
+
+# Thay đổi mã hóa đầu ra của stdout thành utf-8
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # URL của server Flask (phải thay đổi nếu sử dụng server khác)
 UPLOAD_URL = "https://atestforsecurepj.onrender.com/client"
 import requests
-
-# Địa chỉ URL của server Flask
-FILES_URL = "https://atestforsecurepj.onrender.com/files"
-
-response = requests.get(FILES_URL)
-
-if response.status_code == 200:
-    files = response.json().get('files', [])
-    if files:
-        print("Danh sách các file đã tải lên:")
-        for file in files:
-            print(f"ID: {file['id']}, Tên file: {file['file_name']}, Key: {file['key']}")
-    else:
-        print("Không có file nào được tải lên.")
-else:
-    print(f"Lỗi khi lấy danh sách file: {response.status_code}")
-
 
 def upload_file():
     """ Hàm tải file lên server """

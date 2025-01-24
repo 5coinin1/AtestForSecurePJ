@@ -131,6 +131,11 @@ def list_files():
 
 
 @app.route('/')
+def hello():
+    response = jsonify(message="Chào bạn, server đang hoạt động tốt!")
+    response.headers['Content-Type'] = 'application/json; charset=utf-8'
+    return response
+
 def index():
     """
     Trang chủ app - Dành cho client hoặc bất kỳ nội dung nào khác
