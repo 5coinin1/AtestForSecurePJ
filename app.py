@@ -25,7 +25,6 @@ class FileRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_name = db.Column(db.String(100), nullable=False)
     file_path = db.Column(db.String(100), nullable=False)
-    password = db.Column(db.String(100), nullable=False)
     key = db.Column(db.String(100), unique=True, nullable=False)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
 
