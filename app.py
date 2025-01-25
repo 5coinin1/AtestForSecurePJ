@@ -8,6 +8,8 @@ from flask_sqlalchemy import SQLAlchemy
 from encryption_utils import encrypt_file
 from encryption_utils import decrypt_file
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
@@ -81,28 +83,54 @@ def upload_file():
     except Exception as e:
         return jsonify({"error": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
-@app.route('/download', methods=['GET'])
+@app.route('/download', methods=['GET', 'POST'])
 def download_file():
-    file_key = request.args.get('key')
-    password = request.args.get('password')
+    """
+    Tải xuống file đã mã hóa bằng private key và key từ người dùng
+    """
+    if request.method == 'POST':
+        file_key = request.form.get('key')
+        private_key_file = request.files.get('private_key')
 
-    if not file_key or not password:
-        return jsonify({"error": "Vui lòng cung cấp key và password"}), 400
+        if not file_key or not private_key_file:
+            return jsonify({"error": "Vui lòng cung cấp key và private key"}), 400
 
-    file_record = FileRecord.query.filter_by(key=file_key).first()
-    if not file_record:
-        return jsonify({"error": "Không tìm thấy file với key này"}), 404
+        # Đọc private key từ file PEM
+        try:
+            private_key_pem = private_key_file.read()
+            private_key = serialization.load_pem_private_key(
+                private_key_pem, password=None, backend=default_backend()
+            )
+        except Exception as e:
+            return jsonify({"error": f"Không thể giải mã private key: {str(e)}"}), 400
 
-    # File giải mã sẽ được tạo tạm thời
-    decrypted_file_path = file_record.file_path.replace('.enc', '.decrypted')
+        # Tìm file trong cơ sở dữ liệu dựa trên file_key
+        file_record = FileRecord.query.filter_by(key=file_key).first()
+        if not file_record:
+            return jsonify({"error": "Không tìm thấy file với key này"}), 404
 
-    # Giải mã file
-    try:
-        decrypt_file(file_path=file_record.file_path, password=password, output_path=decrypted_file_path)
-    except Exception as e:
-        return jsonify({"error": "Sai password hoặc file không hợp lệ"}), 403
+        # Đường dẫn file giải mã tạm thời
+        decrypted_file_path = file_record.file_path.replace('.enc', '.decrypted')
 
-    return send_file(decrypted_file_path, as_attachment=True)
+        # Giải mã file
+        try:
+            decrypt_file(file_path=file_record.file_path, private_key=private_key, output_path=decrypted_file_path)
+        except Exception as e:
+            return jsonify({"error": "Sai private key hoặc file không hợp lệ"}), 403
+
+        # Trả về file đã giải mã
+        return send_file(decrypted_file_path, as_attachment=True)
+    
+    return '''
+        <h1>Tải xuống file</h1>
+        <form action="/download" method="post" enctype="multipart/form-data">
+            <label for="key">Key:</label>
+            <input type="text" name="key" id="key" required /><br><br>
+            <label for="private_key">Chọn private key (file PEM):</label>
+            <input type="file" name="private_key" id="private_key" required /><br><br>
+            <input type="submit" value="Tải xuống file" />
+        </form>
+    '''
 
 @app.route('/client', methods=['GET', 'POST'])
 def client():
@@ -149,6 +177,7 @@ def client():
             <input type="submit" value="Tải lên file" />
         </form>
     '''
+
 @app.route('/')
 def index():
     """
@@ -159,7 +188,16 @@ def index():
         <p>Chào mừng bạn đến với ứng dụng quản lý file của chúng tôi!</p>
         <ul>
             <li><a href="/client">Tải lên file</a></li>
-            <li><a href="/download?key=YOUR_KEY_HERE&password=YOUR_PASSWORD_HERE">Tải xuống file bằng key</a></li>
+            <li>
+                <h3>Tải xuống file bằng Key</h3>
+                <form action="/download" method="get" enctype="multipart/form-data">
+                    <label for="key">Key:</label>
+                    <input type="text" name="key" id="key" required /><br><br>
+                    <label for="private_key">Chọn private key (file PEM):</label>
+                    <input type="file" name="private_key" id="private_key" required /><br><br>
+                    <input type="submit" value="Tải xuống file" />
+                </form>
+            </li>
         </ul>
     '''
 
