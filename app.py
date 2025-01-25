@@ -63,26 +63,29 @@ def load_public_key_from_file(public_key_file):
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    # Kiểm tra xem yêu cầu có chứa file và public_key không
     if 'file' not in request.files:
         return jsonify({"error": "Không có file trong yêu cầu"}), 400
 
     if 'public_key' not in request.files:
         return jsonify({"error": "Không có public key trong yêu cầu"}), 400
 
+    # Lấy file và public_key từ yêu cầu
     file = request.files['file']
-    public_key_file = request.files['public_key']  # Nhận public key từ client
+    public_key_file = request.files['public_key']
 
+    # Kiểm tra xem file có được chọn hay không
     if file.filename == '':
         return jsonify({"error": "Không có file được chọn"}), 400
 
-    # Lưu file tạm thời vào thư mục trên server
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    # Lưu file tải lên vào thư mục tạm thời trên server
+    file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
     file.save(file_path)
 
-    # Lưu public key
+    # Lưu public key vào hệ thống tệp
     public_key = load_public_key_from_file(public_key_file)
 
-    # Tạo key cho file
+    # Tạo key đặc biệt cho file
     key = generate_key()
 
     # Mã hóa file bằng public key
@@ -95,7 +98,6 @@ def upload_file():
     db.session.commit()
 
     return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
-
 
 @app.route('/download', methods=['GET'])
 def download_file():
