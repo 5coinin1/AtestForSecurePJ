@@ -111,21 +111,23 @@ def client():
     """
     if request.method == 'POST':
         file = request.files['file']
-        public_key = request.files['public_key'].read()  # Lấy public key từ client
+        public_key_pem = request.files['public_key'].read()  # Đọc public key từ file
 
-        if file and public_key:
+        if file:
             # Lưu file tạm thời vào thư mục trên server
             file_path = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(file_path)
 
-            # Tải public key từ dữ liệu
+            # Tạo key cho file
+            key = generate_key()
+
             try:
+                # Tải public key từ dữ liệu
+                public_key = load_public_key(public_key_pem)
+
                 # Mã hóa file bằng public key
                 encrypted_file_path = file_path + '.enc'
                 encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
-
-                # Tạo key cho file
-                key = generate_key()
 
                 # Lưu thông tin vào cơ sở dữ liệu
                 file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
@@ -142,14 +144,11 @@ def client():
         <form method="post" enctype="multipart/form-data">
             <label for="file">Chọn file tải lên:</label>
             <input type="file" name="file" id="file" /><br>
-
-            <label for="public_key">Chọn public key (PEM format):</label>
+            <label for="public_key">Chọn public key:</label>
             <input type="file" name="public_key" id="public_key" /><br>
-
             <input type="submit" value="Tải lên file" />
         </form>
     '''
-
 @app.route('/')
 def index():
     """
