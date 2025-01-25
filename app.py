@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from encryption_utils import encrypt_file
 from encryption_utils import decrypt_file
+from cryptography.hazmat.primitives import serialization
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
