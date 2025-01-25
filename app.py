@@ -23,7 +23,6 @@ class FileRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_name = db.Column(db.String(100), nullable=False)
     file_path = db.Column(db.String(100), nullable=False)
-    password = db.Column(db.String(100), nullable=False)
     key = db.Column(db.String(100), unique=True, nullable=False)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -43,31 +42,43 @@ def generate_password():
 def safe_filename(filename):
     return secure_filename(filename).encode('utf-8').decode('utf-8')
 
+# Hàm tải public key từ dữ liệu
+def load_public_key(public_key_pem: bytes):
+    return serialization.load_pem_public_key(public_key_pem, backend=None)
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({"error": "Không có file trong yêu cầu"}), 400
+    if 'file' not in request.files or 'public_key' not in request.files:
+        return jsonify({"error": "Không có file hoặc public key trong yêu cầu"}), 400
 
     file = request.files['file']
+    public_key_pem = request.files['public_key'].read()
+
     if file.filename == '':
         return jsonify({"error": "Không có file được chọn"}), 400
 
-    # Đường dẫn file mã hóa
-    encrypted_file_path = os.path.join(UPLOAD_FOLDER, file.filename + '.enc')
+    try:
+        # Tải public key từ dữ liệu
+        public_key = load_public_key(public_key_pem)
 
-    # Mã hóa file bằng password
-    password = generate_password()
-    encrypt_file(file_path=file, password=password, output_path=encrypted_file_path)
+        # Đường dẫn file mã hóa
+        encrypted_file_path = os.path.join(UPLOAD_FOLDER, file.filename + '.enc')
 
-    # Tạo key cho file
-    key = generate_key()
+        # Mã hóa file bằng public key và không cần mật khẩu
+        encrypt_file(file_path=file, public_key=public_key, output_path=encrypted_file_path)
 
-    # Lưu thông tin file vào cơ sở dữ liệu
-    file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, password=password, key=key)
-    db.session.add(file_record)
-    db.session.commit()
+        # Tạo key cho file
+        key = generate_key()
 
-    return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key, "password": password})
+        # Lưu thông tin file vào cơ sở dữ liệu
+        file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
+        db.session.add(file_record)
+        db.session.commit()
+
+        return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
+
+    except Exception as e:
+        return jsonify({"error": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
 @app.route('/download', methods=['GET'])
 def download_file():
@@ -99,35 +110,44 @@ def client():
     """
     if request.method == 'POST':
         file = request.files['file']
-        if file:
+        public_key = request.files['public_key'].read()  # Lấy public key từ client
+
+        if file and public_key:
             # Lưu file tạm thời vào thư mục trên server
             file_path = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(file_path)
 
-            # Tạo key cho file
-            key = generate_key()
+            # Tải public key từ dữ liệu
+            try:
+                # Mã hóa file bằng public key
+                encrypted_file_path = file_path + '.enc'
+                encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
 
-            # Mã hóa file
-            password = generate_password()
-            encrypted_file_path = file_path + '.enc'
-            encrypt_file(file_path=file_path, password=password, output_path=encrypted_file_path)
+                # Tạo key cho file
+                key = generate_key()
 
-            # Lưu thông tin vào cơ sở dữ liệu
-            file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, password=password, key=key)
-            db.session.add(file_record)
-            db.session.commit()
+                # Lưu thông tin vào cơ sở dữ liệu
+                file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
+                db.session.add(file_record)
+                db.session.commit()
 
-            # Trả về thông tin file đã upload
-            return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key, "password": password})
+                # Trả về thông tin file đã upload
+                return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
+
+            except Exception as e:
+                return jsonify({"error": f"Đã có lỗi xảy ra khi mã hóa: {str(e)}"}), 500
 
     return '''
         <form method="post" enctype="multipart/form-data">
             <label for="file">Chọn file tải lên:</label>
             <input type="file" name="file" id="file" /><br>
+
+            <label for="public_key">Chọn public key (PEM format):</label>
+            <input type="file" name="public_key" id="public_key" /><br>
+
             <input type="submit" value="Tải lên file" />
         </form>
     '''
-
 
 @app.route('/')
 def index():
