@@ -77,28 +77,43 @@ def upload_file():
 
     return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key, "password": password})
 
+
 @app.route('/download', methods=['GET'])
 def download_file():
     file_key = request.args.get('key')
-    password = request.args.get('password')
+    private_key_file = request.files.get('private_key')  # Nhận private key từ client
 
-    if not file_key or not password:
-        return jsonify({"error": "Vui lòng cung cấp key và password"}), 400
+    if not file_key or not private_key_file:
+        return jsonify({"error": "Vui lòng cung cấp key và private key"}), 400
 
+    # Tìm kiếm bản ghi file trong cơ sở dữ liệu
     file_record = FileRecord.query.filter_by(key=file_key).first()
     if not file_record:
         return jsonify({"error": "Không tìm thấy file với key này"}), 404
 
-    # File giải mã sẽ được tạo tạm thời
+    # Lưu private key tạm thời và load key từ file
+    private_key = load_private_key_from_file(private_key_file)
+
+    # Tạo file giải mã tạm thời
     decrypted_file_path = file_record.file_path.replace('.enc', '.decrypted')
 
-    # Giải mã file
+    # Giải mã file bằng private key RSA và khóa AES
     try:
-        decrypt_file(file_path=file_record.file_path, password=password, output_path=decrypted_file_path)
+        decrypt_file(file_path=file_record.file_path, private_key=private_key, output_path=decrypted_file_path)
     except Exception as e:
-        return jsonify({"error": "Sai password hoặc file không hợp lệ"}), 403
+        return jsonify({"error": "Sai private key hoặc file không hợp lệ"}), 403
 
+    # Trả về file đã giải mã cho client
     return send_file(decrypted_file_path, as_attachment=True)
+
+# Hàm để tải private key từ file
+def load_private_key_from_file(private_key_file):
+    """Load private key từ file (PEM format)."""
+    private_key = serialization.load_pem_private_key(
+        private_key_file.read(),
+        password=None  # Không có mật khẩu bảo vệ key
+    )
+    return private_key
 
 @app.route('/client', methods=['GET', 'POST'])
 def client():
@@ -120,18 +135,17 @@ def client():
             # Tạo key cho file
             key = generate_key()
 
-            # Mã hóa file
-            password = generate_password()
+            # Mã hóa file bằng public key
             encrypted_file_path = file_path + '.enc'
-            encrypt_file(file_path=file_path, public_key=public_key, password=password, output_path=encrypted_file_path)
+            encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
 
-            # Lưu thông tin vào cơ sở dữ liệu
-            file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, password=password, key=key)
+            # Lưu thông tin vào cơ sở dữ liệu mà không cần mật khẩu
+            file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
             db.session.add(file_record)
             db.session.commit()
 
             # Trả về thông tin file đã upload
-            return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key, "password": password})
+            return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
 
     return '''
         <form method="post" enctype="multipart/form-data">
@@ -153,7 +167,15 @@ def index():
         <p>Chào mừng bạn đến với ứng dụng quản lý file của chúng tôi!</p>
         <ul>
             <li><a href="/client">Tải lên file</a></li>
-            <li><a href="/download?key=YOUR_KEY_HERE&password=YOUR_PASSWORD_HERE">Tải xuống file bằng key</a></li>
+            <li>
+                <form action="/download" method="get" enctype="multipart/form-data">
+                    <label for="key">Nhập key:</label>
+                    <input type="text" name="key" id="key" required><br>
+                    <label for="private_key">Chọn private key RSA:</label>
+                    <input type="file" name="private_key" id="private_key" required><br>
+                    <input type="submit" value="Tải xuống file">
+                </form>
+            </li>
         </ul>
     '''
 
