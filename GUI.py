@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from tkinter import simpledialog
 import requests
 import sys
 import io
@@ -13,15 +14,26 @@ DOWNLOAD_URL = "https://atestforsecurepj.onrender.com/download"
 
 def upload_file():
     """Tải lên file lên server."""
+    # Thông báo chọn file
+    messagebox.showinfo("Chọn File", "Vui lòng chọn file để tải lên.")
     file_path = filedialog.askopenfilename(title="Chọn file để tải lên")
-    public_key_path = filedialog.askopenfilename(title="Chọn file public key")
+    if not file_path:
+        messagebox.showerror("Lỗi", "Bạn chưa chọn file!")
+        return
 
-    if file_path and public_key_path:
-        try:
-            # Mở file và public key
+    # Thông báo chọn public key
+    messagebox.showinfo("Chọn Public Key", "Vui lòng chọn file public key.")
+    public_key_path = filedialog.askopenfilename(title="Chọn file public key")
+    if not public_key_path:
+        messagebox.showerror("Lỗi", "Bạn chưa chọn file public key!")
+        return
+
+    try:
+        # Mở file và public key
+        with open(file_path, 'rb') as file, open(public_key_path, 'rb') as public_key:
             files = {
-                'file': open(file_path, 'rb'),
-                'public_key': open(public_key_path, 'rb')
+                'file': file,
+                'public_key': public_key
             }
 
             # Gửi file lên server
@@ -33,43 +45,42 @@ def upload_file():
             else:
                 messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
 
-        except Exception as e:
-            messagebox.showerror("Lỗi", f"Không thể tải lên file: {str(e)}")
-        finally:
-            files['file'].close()
-            files['public_key'].close()
+    except Exception as e:
+        messagebox.showerror("Lỗi", f"Không thể tải lên file: {str(e)}")
 
 def download_file():
-    """Tải file từ server xuống."""
-    file_key = tk.simpledialog.askstring("Key", "Nhập key file:")
-    private_key_path = filedialog.askopenfilename(title="Chọn file private key")
+    """Tải xuống file đã giải mã từ server."""
+    # Nhập key
+    file_key = simpledialog.askstring("Nhập Key", "Vui lòng nhập key:")
+    if not file_key:
+        messagebox.showerror("Lỗi", "Bạn chưa nhập key!")
+        return
 
-    if file_key and private_key_path:
-        try:
-            # Mở private key
-            private_key_file = open(private_key_path, 'rb')
+    # Thông báo chọn private key
+    messagebox.showinfo("Chọn Private Key", "Vui lòng chọn file private key (PEM).")
+    private_key_path = filedialog.askopenfilename(title="Chọn file private key (PEM)")
+    if not private_key_path:
+        messagebox.showerror("Lỗi", "Bạn chưa chọn file private key!")
+        return
 
-            # Gửi yêu cầu tải file từ server với key và private key
+    try:
+        # Mở private key file
+        with open(private_key_path, 'rb') as private_key_file:
+            # Gửi yêu cầu POST để tải xuống file
             files = {'private_key': private_key_file}
-            params = {'key': file_key}
+            data = {'key': file_key}
+            
+            response = requests.post(DOWNLOAD_URL, data=data, files=files)
 
-            # Gửi yêu cầu tải file
-            response = requests.get(DOWNLOAD_URL, files=files, params=params)
-
-            # Kiểm tra phản hồi từ server
             if response.status_code == 200:
-                file_name = "downloaded_file"  # Tên file được tải về từ server
-                with open(file_name, 'wb') as f:
+                # Nếu tải xuống thành công, lưu file về máy
+                with open("downloaded_file.decrypted", 'wb') as f:
                     f.write(response.content)
-
-                messagebox.showinfo("Thành công", f"File đã được tải xuống và lưu dưới tên {file_name}")
+                messagebox.showinfo("Thành công", "Tải xuống file thành công!")
             else:
                 messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
-
-        except Exception as e:
-            messagebox.showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
-        finally:
-            private_key_file.close()
+    except Exception as e:
+        messagebox.showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
 
 # Tạo GUI
 def create_gui():
@@ -81,8 +92,8 @@ def create_gui():
     upload_btn.pack(pady=10)
 
     # Tạo button download
-    download_btn = tk.Button(root, text="Tải xuống file", command=download_file)
-    download_btn.pack(pady=10)
+    download_button = tk.Button(root, text="Tải xuống File", command=download_file)
+    download_button.pack(pady=20)
 
     # Chạy ứng dụng GUI
     root.mainloop()
