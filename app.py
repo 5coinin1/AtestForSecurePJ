@@ -187,16 +187,7 @@ def index():
         <p>Chào mừng bạn đến với ứng dụng quản lý file của chúng tôi!</p>
         <ul>
             <li><a href="/client">Tải lên file</a></li>
-            <li>
-                <h3>Tải xuống file bằng Key</h3>
-                <form action="/download" method="get" enctype="multipart/form-data">
-                    <label for="key">Key:</label>
-                    <input type="text" name="key" id="key" required /><br><br>
-                    <label for="private_key">Chọn private key (file PEM):</label>
-                    <input type="file" name="private_key" id="private_key" required /><br><br>
-                    <input type="submit" value="Tải xuống file" />
-                </form>
-            </li>
+            <li><a href="/download">Tải xuống file bằng key</a></li>
         </ul>
     '''
 
