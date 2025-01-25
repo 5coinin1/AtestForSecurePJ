@@ -14,14 +14,12 @@ DOWNLOAD_URL = "https://atestforsecurepj.onrender.com/download"
 
 def upload_file():
     """Tải lên file lên server."""
-    # Thông báo chọn file
     messagebox.showinfo("Chọn File", "Vui lòng chọn file để tải lên.")
     file_path = filedialog.askopenfilename(title="Chọn file để tải lên")
     if not file_path:
         messagebox.showerror("Lỗi", "Bạn chưa chọn file!")
         return
 
-    # Thông báo chọn public key
     messagebox.showinfo("Chọn Public Key", "Vui lòng chọn file public key.")
     public_key_path = filedialog.askopenfilename(title="Chọn file public key")
     if not public_key_path:
@@ -29,34 +27,23 @@ def upload_file():
         return
 
     try:
-        # Mở file và public key
         with open(file_path, 'rb') as file, open(public_key_path, 'rb') as public_key:
-            files = {
-                'file': file,
-                'public_key': public_key
-            }
-
-            # Gửi file lên server
+            files = {'file': file, 'public_key': public_key}
             response = requests.post(UPLOAD_URL, files=files)
-
-            # Kiểm tra phản hồi từ server
             if response.status_code == 200:
                 messagebox.showinfo("Thành công", "File đã được tải lên thành công!")
             else:
                 messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
-
     except Exception as e:
         messagebox.showerror("Lỗi", f"Không thể tải lên file: {str(e)}")
 
 def download_file():
     """Tải xuống file đã giải mã từ server."""
-    # Nhập key
     file_key = simpledialog.askstring("Nhập Key", "Vui lòng nhập key:")
     if not file_key:
         messagebox.showerror("Lỗi", "Bạn chưa nhập key!")
         return
 
-    # Thông báo chọn private key
     messagebox.showinfo("Chọn Private Key", "Vui lòng chọn file private key (PEM).")
     private_key_path = filedialog.askopenfilename(title="Chọn file private key (PEM)")
     if not private_key_path:
@@ -64,19 +51,26 @@ def download_file():
         return
 
     try:
+        # Hỏi tên và vị trí lưu file
+        save_path = filedialog.asksaveasfilename(
+            title="Lưu file dưới tên...",
+            defaultextension=".decrypted",
+            filetypes=[("Decrypted File", "*.decrypted"), ("All Files", "*.*")]
+        )
+        if not save_path:
+            messagebox.showinfo("Hủy", "Bạn đã hủy lưu file.")
+            return
+
         # Mở private key file
         with open(private_key_path, 'rb') as private_key_file:
-            # Gửi yêu cầu POST để tải xuống file
             files = {'private_key': private_key_file}
             data = {'key': file_key}
-            
             response = requests.post(DOWNLOAD_URL, data=data, files=files)
 
             if response.status_code == 200:
-                # Nếu tải xuống thành công, lưu file về máy
-                with open("downloaded_file.decrypted", 'wb') as f:
+                with open(save_path, 'wb') as f:
                     f.write(response.content)
-                messagebox.showinfo("Thành công", "Tải xuống file thành công!")
+                messagebox.showinfo("Thành công", f"Tải xuống file thành công!\nFile được lưu tại: {save_path}")
             else:
                 messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
     except Exception as e:
