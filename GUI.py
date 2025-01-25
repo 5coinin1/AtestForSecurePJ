@@ -12,73 +12,81 @@ UPLOAD_URL = "https://atestforsecurepj.onrender.com/client"
 DOWNLOAD_URL = "https://atestforsecurepj.onrender.com/download"
 
 def upload_file():
-    """ Hàm tải file lên server """
-    file_path = filedialog.askopenfilename()  # Chọn file
-    if not file_path:
-        return
-    
-    files = {'file': open(file_path, 'rb')}
-    response = requests.post(UPLOAD_URL, files=files)
-    files['file'].close()
-    
-    if response.status_code == 200:
-        # Lấy key và password từ response
-        key = response.json().get('key')
-        password = response.json().get('password')
-        
-        # Hiển thị thông báo
-        messagebox.showinfo("Tải lên thành công", f"File đã được tải lên thành công.\nKey: {key}\nPassword: {password}")
-    else:
-        messagebox.showerror("Lỗi", "Có lỗi xảy ra khi tải lên file.")
+    """Tải lên file lên server."""
+    file_path = filedialog.askopenfilename(title="Chọn file để tải lên")
+    public_key_path = filedialog.askopenfilename(title="Chọn file public key")
+
+    if file_path and public_key_path:
+        try:
+            # Mở file và public key
+            files = {
+                'file': open(file_path, 'rb'),
+                'public_key': open(public_key_path, 'rb')
+            }
+
+            # Gửi file lên server
+            response = requests.post(UPLOAD_URL, files=files)
+
+            # Kiểm tra phản hồi từ server
+            if response.status_code == 200:
+                messagebox.showinfo("Thành công", "File đã được tải lên thành công!")
+            else:
+                messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
+
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể tải lên file: {str(e)}")
+        finally:
+            files['file'].close()
+            files['public_key'].close()
 
 def download_file():
-    """ Hàm tải file từ server theo key và password """
-    key = download_key_entry.get()  # Lấy key từ ô nhập liệu
-    password = download_password_entry.get()  # Lấy password từ ô nhập liệu
-    
-    if not key or not password:
-        messagebox.showwarning("Thiếu key hoặc password", "Bạn phải nhập cả key và password để tải xuống file.")
-        return
+    """Tải file từ server xuống."""
+    file_key = tk.simpledialog.askstring("Key", "Nhập key file:")
+    private_key_path = filedialog.askopenfilename(title="Chọn file private key")
 
-    # Tạo URL tải file với key và password
-    download_url_with_key = f"{DOWNLOAD_URL}?key={key}&password={password}"
-    
-    response = requests.get(download_url_with_key)
-    
-    if response.status_code == 200:
-        # Lưu file đã tải về
-        save_path = filedialog.asksaveasfilename(defaultextension=".decrypted")
-        if save_path:
-            with open(save_path, 'wb') as f:
-                f.write(response.content)
-            messagebox.showinfo("Tải xuống thành công", "File đã được tải xuống thành công.")
-    else:
-        messagebox.showerror("Lỗi", "Không tìm thấy file với key hoặc password đã nhập.")
+    if file_key and private_key_path:
+        try:
+            # Mở private key
+            private_key_file = open(private_key_path, 'rb')
 
-# Tạo giao diện Tkinter
-app = tk.Tk()
-app.title("Ứng dụng Tải lên và Tải xuống File")
-app.geometry("600x400")
+            # Gửi yêu cầu tải file từ server với key và private key
+            files = {'private_key': private_key_file}
+            params = {'key': file_key}
 
-# Nút tải lên file
-upload_button = tk.Button(app, text="Tải lên File", command=upload_file)
-upload_button.pack(pady=10)
+            # Gửi yêu cầu tải file
+            response = requests.get(DOWNLOAD_URL, files=files, params=params)
 
-# Nhập key và password cho tải xuống file
-download_key_label = tk.Label(app, text="Nhập key để tải xuống file:")
-download_key_label.pack(pady=5)
+            # Kiểm tra phản hồi từ server
+            if response.status_code == 200:
+                file_name = "downloaded_file"  # Tên file được tải về từ server
+                with open(file_name, 'wb') as f:
+                    f.write(response.content)
 
-download_key_entry = tk.Entry(app)
-download_key_entry.pack(pady=5)
+                messagebox.showinfo("Thành công", f"File đã được tải xuống và lưu dưới tên {file_name}")
+            else:
+                messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
 
-download_password_label = tk.Label(app, text="Nhập password để tải xuống file:")
-download_password_label.pack(pady=5)
+        except Exception as e:
+            messagebox.showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
+        finally:
+            private_key_file.close()
 
-download_password_entry = tk.Entry(app)
-download_password_entry.pack(pady=5)
+# Tạo GUI
+def create_gui():
+    root = tk.Tk()
+    root.title("Ứng dụng Tải Lên và Tải Xuống File")
 
-download_button = tk.Button(app, text="Tải xuống File", command=download_file)
-download_button.pack(pady=10)
+    # Tạo button upload
+    upload_btn = tk.Button(root, text="Tải lên file", command=upload_file)
+    upload_btn.pack(pady=10)
+
+    # Tạo button download
+    download_btn = tk.Button(root, text="Tải xuống file", command=download_file)
+    download_btn.pack(pady=10)
+
+    # Chạy ứng dụng GUI
+    root.mainloop()
 
 # Chạy ứng dụng
-app.mainloop()
+if __name__ == "__main__":
+    create_gui()
