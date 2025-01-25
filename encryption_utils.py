@@ -1,118 +1,55 @@
 import os
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
 
-
-def generate_key_pair():
-    """Tạo cặp khóa RSA (public key và private key)."""
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
+def derive_key(password: str, salt: bytes) -> bytes:
+    """Tạo khóa mã hóa từ password và salt."""
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
         backend=default_backend()
     )
-    public_key = private_key.public_key()
-    return private_key, public_key
+    return kdf.derive(password.encode())
 
-
-def save_private_key(private_key, file_path):
-    """Lưu private key vào file."""
-    with open(file_path, 'wb') as f:
-        f.write(
-            private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-        )
-
-
-def load_private_key(file_path):
-    """Tải private key từ file."""
-    with open(file_path, 'rb') as f:
-        return serialization.load_pem_private_key(
-            f.read(),
-            password=None,
-            backend=default_backend()
-        )
-
-
-def save_public_key(public_key, file_path):
-    """Lưu public key vào file."""
-    with open(file_path, 'wb') as f:
-        f.write(
-            public_key.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
-        )
-
-
-def load_public_key(file_path):
-    """Tải public key từ file."""
-    with open(file_path, 'rb') as f:
-        return serialization.load_pem_public_key(
-            f.read(),
-            backend=default_backend()
-        )
-
-
-def encrypt_file(file_path: str, public_key, output_path: str) -> None:
-    """Mã hóa file bằng public key."""
-    # Tạo salt và key ngẫu nhiên để mã hóa file
+def encrypt_file(file_path: str, password: str, output_path: str) -> None:
+    """Mã hóa file bằng password."""
+    # Tạo salt và khởi tạo khóa
     salt = os.urandom(16)
-    key = os.urandom(32)
+    key = derive_key(password, salt)
 
     # Đọc nội dung file gốc
     with open(file_path, 'rb') as f:
         plaintext = f.read()
 
-    # Mã hóa nội dung file bằng AES
+    # Mã hóa nội dung
     iv = os.urandom(16)  # Khởi tạo vector IV
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(plaintext) + encryptor.finalize()
 
-    # Mã hóa key AES bằng public key RSA
-    encrypted_key = public_key.encrypt(
-        key,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-
-    # Lưu file mã hóa (bao gồm salt, IV, encrypted_key và ciphertext)
+    # Lưu file mã hóa (bao gồm salt và IV)
     with open(output_path, 'wb') as f:
-        f.write(salt + iv + encrypted_key + ciphertext)
+        f.write(salt + iv + ciphertext)
 
-
-def decrypt_file(file_path: str, private_key, output_path: str) -> None:
-    """Giải mã file bằng private key."""
+def decrypt_file(file_path: str, password: str, output_path: str) -> None:
+    """Giải mã file bằng password."""
     # Đọc file mã hóa
     with open(file_path, 'rb') as f:
         data = f.read()
 
-    # Trích xuất các phần từ file mã hóa
+    # Trích xuất salt, IV và nội dung mã hóa
     salt = data[:16]
     iv = data[16:32]
-    encrypted_key = data[32:288]  # Độ dài encrypted_key là 256 bytes (RSA 2048-bit)
-    ciphertext = data[288:]
+    ciphertext = data[32:]
 
-    # Giải mã key AES bằng private key RSA
-    key = private_key.decrypt(
-        encrypted_key,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
+    # Tạo lại khóa từ password và salt
+    key = derive_key(password, salt)
 
-    # Giải mã nội dung file bằng AES
+    # Giải mã nội dung
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
