@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
 
 from encryption_utils import encrypt_file, decrypt_file
+from cryptography.hazmat.backends import default_backend
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
@@ -48,7 +49,7 @@ def safe_filename(filename):
 # Hàm để tải public key từ file
 def load_public_key_from_file(public_key_file):
     """
-    Hàm này sẽ lưu public key lên hệ thống và sau đó đọc nó.
+    Hàm này đọc public key từ file và trả về đối tượng public key.
     """
     # Tạo đường dẫn file tạm thời để lưu public key
     public_key_path = os.path.join(UPLOAD_FOLDER, secure_filename(public_key_file.filename))
@@ -58,7 +59,11 @@ def load_public_key_from_file(public_key_file):
 
     # Mở và đọc file public key
     with open(public_key_path, 'rb') as key_file:
-        public_key = key_file.read()  # Đọc nội dung public key
+        # Sử dụng cryptography để tải khóa công khai từ file PEM
+        public_key = serialization.load_pem_public_key(
+            key_file.read(),  # Đọc nội dung public key
+            backend=default_backend()
+        )
     return public_key
 
 @app.route('/upload', methods=['POST'])
