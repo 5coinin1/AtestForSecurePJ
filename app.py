@@ -25,6 +25,7 @@ class FileRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_name = db.Column(db.String(100), nullable=False)
     file_path = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(100), nullable=False)
     key = db.Column(db.String(100), unique=True, nullable=False)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -46,8 +47,18 @@ def safe_filename(filename):
 
 # Hàm để tải public key từ file
 def load_public_key_from_file(public_key_file):
-    with open(public_key_file, 'rb') as key_file:
-        public_key = serialization.load_pem_public_key(key_file.read())
+    """
+    Hàm này sẽ lưu public key lên hệ thống và sau đó đọc nó.
+    """
+    # Tạo đường dẫn file tạm thời để lưu public key
+    public_key_path = os.path.join(UPLOAD_FOLDER, secure_filename(public_key_file.filename))
+
+    # Lưu file public key vào thư mục tạm
+    public_key_file.save(public_key_path)
+
+    # Mở và đọc file public key
+    with open(public_key_path, 'rb') as key_file:
+        public_key = key_file.read()  # Đọc nội dung public key
     return public_key
 
 @app.route('/upload', methods=['POST'])
@@ -125,41 +136,43 @@ def load_private_key_from_file(private_key_file):
 
 @app.route('/client', methods=['GET', 'POST'])
 def client():
-    """
-    Client app - Giao diện tải lên và tải xuống file từ server.
-    """
     if request.method == 'POST':
-        file = request.files['file']
-        public_key_file = request.files['public_key']  # Nhận public key
+        file = request.files.get('file')
+        public_key_file = request.files.get('public_key')
 
-        if file and public_key_file:
-            # Lưu file tạm thời vào thư mục trên server
-            file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-            file.save(file_path)
+        # Kiểm tra xem file và public key có tồn tại không
+        if not file or not public_key_file:
+            return jsonify({"error": "Thiếu file hoặc public key"}), 400
 
-            # Lưu public key
-            public_key = load_public_key_from_file(public_key_file)
+        # Lưu file và public key lên server
+        file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+        public_key_path = os.path.join(UPLOAD_FOLDER, secure_filename(public_key_file.filename))
 
-            # Tạo key cho file
-            key = generate_key()
+        file.save(file_path)
+        public_key_file.save(public_key_path)
 
-            # Mã hóa file bằng public key
-            encrypted_file_path = file_path + '.enc'
-            encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
+        # Đọc public key từ file đã tải lên
+        public_key = load_public_key_from_file(public_key_file)
 
-            # Lưu thông tin vào cơ sở dữ liệu mà không cần mật khẩu
-            file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
-            db.session.add(file_record)
-            db.session.commit()
+        # Tạo key cho file
+        key = generate_key()
 
-            # Trả về thông tin file đã upload
-            return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
+        # Mã hóa file bằng public key
+        encrypted_file_path = file_path + '.enc'
+        encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
+
+        # Lưu thông tin vào cơ sở dữ liệu
+        file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
+        db.session.add(file_record)
+        db.session.commit()
+
+        return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
 
     return '''
         <form method="post" enctype="multipart/form-data">
             <label for="file">Chọn file tải lên:</label>
             <input type="file" name="file" id="file" /><br>
-            <label for="public_key">Chọn Public Key (PEM):</label>
+            <label for="public_key">Chọn Public Key:</label>
             <input type="file" name="public_key" id="public_key" /><br>
             <input type="submit" value="Tải lên file" />
         </form>
