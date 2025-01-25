@@ -4,9 +4,11 @@ from werkzeug.utils import secure_filename
 from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes
 
-from encryption_utils import encrypt_file
-from encryption_utils import decrypt_file
+from encryption_utils import encrypt_file, decrypt_file
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
@@ -42,6 +44,12 @@ def generate_password():
 # Đảm bảo xử lý tên file an toàn và hỗ trợ Unicode
 def safe_filename(filename):
     return secure_filename(filename).encode('utf-8').decode('utf-8')
+
+# Hàm để tải public key từ file
+def load_public_key_from_file(public_key_file):
+    with open(public_key_file, 'rb') as key_file:
+        public_key = serialization.load_pem_public_key(key_file.read())
+    return public_key
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -99,10 +107,15 @@ def client():
     """
     if request.method == 'POST':
         file = request.files['file']
-        if file:
+        public_key_file = request.files['public_key']  # Nhận public key
+
+        if file and public_key_file:
             # Lưu file tạm thời vào thư mục trên server
             file_path = os.path.join(UPLOAD_FOLDER, file.filename)
             file.save(file_path)
+
+            # Lưu public key
+            public_key = load_public_key_from_file(public_key_file)
 
             # Tạo key cho file
             key = generate_key()
@@ -110,7 +123,7 @@ def client():
             # Mã hóa file
             password = generate_password()
             encrypted_file_path = file_path + '.enc'
-            encrypt_file(file_path=file_path, password=password, output_path=encrypted_file_path)
+            encrypt_file(file_path=file_path, public_key=public_key, password=password, output_path=encrypted_file_path)
 
             # Lưu thông tin vào cơ sở dữ liệu
             file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, password=password, key=key)
@@ -124,10 +137,11 @@ def client():
         <form method="post" enctype="multipart/form-data">
             <label for="file">Chọn file tải lên:</label>
             <input type="file" name="file" id="file" /><br>
+            <label for="public_key">Chọn Public Key (PEM):</label>
+            <input type="file" name="public_key" id="public_key" /><br>
             <input type="submit" value="Tải lên file" />
         </form>
     '''
-
 
 @app.route('/')
 def index():
