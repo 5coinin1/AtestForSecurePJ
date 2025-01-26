@@ -36,10 +36,6 @@ with app.app_context():
 def generate_key():
     return hashlib.sha256(os.urandom(16)).hexdigest()
 
-# Hàm tạo mật khẩu cho file
-def generate_password():
-    return hashlib.sha256(os.urandom(16)).hexdigest()
-
 # Đảm bảo xử lý tên file an toàn và hỗ trợ Unicode
 def safe_filename(filename):
     return secure_filename(filename).encode('utf-8').decode('utf-8')

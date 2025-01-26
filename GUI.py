@@ -6,8 +6,7 @@ import sys
 import io
 import os
 
-from encryption_utils import encrypt_file
-from encryption_utils import decrypt_file
+from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save_private_key, save_public_key
 from app import load_public_key
 
 # Thay đổi mã hóa đầu ra của stdout thành utf-8
@@ -67,13 +66,11 @@ def upload_file():
 
 def download_file():
     """Tải xuống file đã giải mã từ server."""
-    # Nhập key từ người dùng
     file_key = simpledialog.askstring("Nhập Key", "Vui lòng nhập key:")
     if not file_key:
         messagebox.showerror("Lỗi", "Bạn chưa nhập key!")
         return
 
-    # Chọn file private key
     messagebox.showinfo("Chọn Private Key", "Vui lòng chọn file private key (PEM).")
     private_key_path = filedialog.askopenfilename(title="Chọn file private key (PEM)")
     if not private_key_path:
@@ -81,47 +78,52 @@ def download_file():
         return
 
     try:
-        # Gửi yêu cầu tải file từ server
         with open(private_key_path, 'rb') as private_key_file:
             files = {'private_key': private_key_file}
             data = {'key': file_key}
             response = requests.post(DOWNLOAD_URL, data=data, files=files)
 
             if response.status_code == 200:
-                # Lấy tên file gốc từ header Content-Disposition (nếu server cung cấp)
                 content_disposition = response.headers.get('Content-Disposition', '')
                 if 'filename=' in content_disposition:
                     filename = content_disposition.split('filename=')[1].strip('"')
                 else:
-                    # Nếu server không gửi tên file, dùng tên mặc định
                     filename = "downloaded_file.decrypted"
 
-                # Bỏ đuôi `.decrypted` nếu có
                 if filename.endswith('.decrypted'):
                     filename = filename.rsplit('.decrypted', 1)[0]
 
-                # Hỏi người dùng nơi lưu file
                 save_path = filedialog.asksaveasfilename(
                     title="Lưu file dưới tên...",
-                    initialfile=filename,  # Gợi ý tên file gốc
-                    defaultextension="." + filename.split('.')[-1],  # Gợi ý phần mở rộng gốc
+                    initialfile=filename,
+                    defaultextension="." + filename.split('.')[-1],
                     filetypes=[("All Files", "*.*")]
                 )
                 if not save_path:
                     messagebox.showinfo("Hủy", "Bạn đã hủy lưu file.")
                     return
 
-                # Lưu file tải xuống vào đường dẫn đã chọn
                 with open(save_path, 'wb') as f:
                     f.write(response.content)
 
-                # Thông báo thành công
                 messagebox.showinfo("Thành công", f"Tải xuống file thành công!\nFile được lưu tại: {save_path}")
             else:
-                # Hiển thị lỗi từ server (nếu có)
                 messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
     except Exception as e:
         messagebox.showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
+
+def generate_keys():
+    """Tạo cặp khóa công khai và riêng."""
+    try:
+        private_key, public_key = generate_key_pair()
+        
+        # Lưu khóa vào file
+        save_private_key(private_key, 'private_key.pem')
+        save_public_key(public_key, 'public_key.pem')
+        
+        messagebox.showinfo("Thành công", "Cặp khóa đã được tạo và lưu vào file: private_key.pem và public_key.pem")
+    except Exception as e:
+        messagebox.showerror("Lỗi", f"Không thể tạo cặp khóa: {str(e)}")
 
 # Tạo GUI
 def create_gui():
@@ -135,6 +137,10 @@ def create_gui():
     # Tạo button download
     download_button = tk.Button(root, text="Tải xuống File", command=download_file)
     download_button.pack(pady=20)
+
+    # Tạo button tạo cặp khóa
+    generate_keys_btn = tk.Button(root, text="Tạo Cặp Khóa", command=generate_keys)
+    generate_keys_btn.pack(pady=20)
 
     # Chạy ứng dụng GUI
     root.mainloop()
