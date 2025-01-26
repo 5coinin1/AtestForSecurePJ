@@ -9,6 +9,7 @@ import os
 from encryption_utils import encrypt_file
 from encryption_utils import decrypt_file
 from app import load_public_key
+from app import load_private_key
 
 # Thay đổi mã hóa đầu ra của stdout thành utf-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -35,7 +36,7 @@ def upload_file():
         # Đọc public key từ file
         with open(public_key_path, 'rb') as pub_key_file:
             public_key_pem = pub_key_file.read()
-            public_key = load_public_key(public_key_pem)  # Giả sử có hàm load_public_key
+            public_key = load_public_key(public_key_pem)
 
         # Tạo tên file mã hóa
         encrypted_file_path = file_path + '.enc'
@@ -64,64 +65,56 @@ def upload_file():
 
     except Exception as e:
         messagebox.showerror("Lỗi", f"Không thể tải lên file: {str(e)}")
-def download_file():
-    """Tải xuống file đã giải mã từ server."""
-    # Nhập key từ người dùng
-    file_key = simpledialog.askstring("Nhập Key", "Vui lòng nhập key:")
-    if not file_key:
-        messagebox.showerror("Lỗi", "Bạn chưa nhập key!")
-        return
 
-    # Chọn file private key
-    messagebox.showinfo("Chọn Private Key", "Vui lòng chọn file private key (PEM).")
-    private_key_path = filedialog.askopenfilename(title="Chọn file private key (PEM)")
-    if not private_key_path:
-        messagebox.showerror("Lỗi", "Bạn chưa chọn file private key!")
+def download_file():
+    """Tải xuống và giải mã file."""
+    messagebox.showinfo("Nhập ID File", "Vui lòng nhập ID của file để tải xuống.")
+    file_id = filedialog.askstring("Nhập ID", "Nhập ID file bạn muốn tải xuống")
+    if not file_id:
+        messagebox.showerror("Lỗi", "ID file không hợp lệ!")
         return
 
     try:
-        # Gửi yêu cầu tải file từ server
-        with open(private_key_path, 'rb') as private_key_file:
-            files = {'private_key': private_key_file}
-            data = {'key': file_key}
-            response = requests.post(DOWNLOAD_URL, data=data, files=files)
+        # Gửi yêu cầu tải xuống file
+        response = requests.get(DOWNLOAD_URL + file_id)
+        
+        if response.status_code == 200:
+            # Lưu file đã tải về
+            encrypted_file_path = f"{file_id}.enc"
+            with open(encrypted_file_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Chọn vị trí lưu file đã giải mã
+            save_path = filedialog.asksaveasfilename(defaultextension=".txt", title="Chọn nơi lưu file đã giải mã")
+            if not save_path:
+                messagebox.showerror("Lỗi", "Bạn chưa chọn vị trí lưu file!")
+                return
 
-            if response.status_code == 200:
-                # Lấy tên file gốc từ header Content-Disposition (nếu server cung cấp)
-                content_disposition = response.headers.get('Content-Disposition', '')
-                if 'filename=' in content_disposition:
-                    filename = content_disposition.split('filename=')[1].strip('"')
-                else:
-                    # Nếu server không gửi tên file, dùng tên mặc định
-                    filename = "downloaded_file.decrypted"
+            # Giải mã file đã tải xuống
+            messagebox.showinfo("Giải mã", "Đang giải mã file...")
+            private_key_path = filedialog.askopenfilename(title="Chọn private key")
+            if not private_key_path:
+                messagebox.showerror("Lỗi", "Bạn chưa chọn private key!")
+                return
 
-                # Bỏ đuôi `.decrypted` nếu có
-                if filename.endswith('.decrypted'):
-                    filename = filename.rsplit('.decrypted', 1)[0]
+            # Đọc private key từ file
+            with open(private_key_path, 'rb') as private_key_file:
+                private_key_pem = private_key_file.read()
+                private_key = load_private_key(private_key_pem)  # Giả sử có hàm load_private_key
 
-                # Hỏi người dùng nơi lưu file
-                save_path = filedialog.asksaveasfilename(
-                    title="Lưu file dưới tên...",
-                    initialfile=filename,  # Gợi ý tên file gốc
-                    defaultextension="." + filename.split('.')[-1],  # Gợi ý phần mở rộng gốc
-                    filetypes=[("All Files", "*.*")]
-                )
-                if not save_path:
-                    messagebox.showinfo("Hủy", "Bạn đã hủy lưu file.")
-                    return
+            # Giải mã file
+            decrypt_file(encrypted_file_path, private_key, save_path)
 
-                # Lưu file tải xuống vào đường dẫn đã chọn
-                with open(save_path, 'wb') as f:
-                    f.write(response.content)
+            # Xóa file mã hóa sau khi giải mã
+            os.remove(encrypted_file_path)
 
-                # Thông báo thành công
-                messagebox.showinfo("Thành công", f"Tải xuống file thành công!\nFile được lưu tại: {save_path}")
-            else:
-                # Hiển thị lỗi từ server (nếu có)
-                messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
+            messagebox.showinfo("Thành công", "File đã được giải mã và lưu thành công!")
+
+        else:
+            messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
+
     except Exception as e:
-        messagebox.showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
-
+        messagebox.showerror("Lỗi", f"Không thể tải và giải mã file: {str(e)}")
 # Tạo GUI
 def create_gui():
     root = tk.Tk()
