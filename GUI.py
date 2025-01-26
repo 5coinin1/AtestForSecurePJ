@@ -14,8 +14,8 @@ from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # URL của server Flask (phải thay đổi nếu sử dụng server khác)
-UPLOAD_URL = "https://atestforsecurepj.onrender.com/upload"
-DOWNLOAD_URL = "https://atestforsecurepj.onrender.com/download"
+UPLOAD_URL = os.getenv('UPLOAD_URL')
+DOWNLOAD_URL = os.getenv('DOWNLOAD_URL')
 
 # Hàm tải public key từ dữ liệu
 def load_public_key(public_key_pem: bytes):
