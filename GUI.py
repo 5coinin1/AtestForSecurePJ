@@ -7,8 +7,8 @@ import sys
 import io
 import os
 
+from cryptography.hazmat.primitives import serialization
 from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save_private_key, save_public_key
-from app import load_public_key
 
 # Thay đổi mã hóa đầu ra của stdout thành utf-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -16,6 +16,10 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 # URL của server Flask (phải thay đổi nếu sử dụng server khác)
 UPLOAD_URL = "https://atestforsecurepj.onrender.com/upload"
 DOWNLOAD_URL = "https://atestforsecurepj.onrender.com/download"
+
+# Hàm tải public key từ dữ liệu
+def load_public_key(public_key_pem: bytes):
+    return serialization.load_pem_public_key(public_key_pem, backend=None)
 
 def upload_file():
     """Tải lên file đã mã hóa lên server."""

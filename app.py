@@ -4,11 +4,14 @@ from werkzeug.utils import secure_filename
 from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+from dotenv import load_dotenv
+load_dotenv()
 
 from encryption_utils import encrypt_file
 from encryption_utils import decrypt_file
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+from GUI import load_public_key
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
@@ -39,10 +42,6 @@ def generate_key():
 # Đảm bảo xử lý tên file an toàn và hỗ trợ Unicode
 def safe_filename(filename):
     return secure_filename(filename).encode('utf-8').decode('utf-8')
-
-# Hàm tải public key từ dữ liệu
-def load_public_key(public_key_pem: bytes):
-    return serialization.load_pem_public_key(public_key_pem, backend=None)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
