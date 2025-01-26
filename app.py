@@ -105,8 +105,13 @@ def download_file():
         except Exception as e:
             return jsonify({"error": "Sai private key hoặc file không hợp lệ"}), 403
 
-        # Trả về file đã giải mã
-        return send_file(decrypted_file_path, as_attachment=True)
+        # Lấy tên file gốc (bỏ phần mở rộng .decrypted)
+        filename = os.path.basename(decrypted_file_path)
+        if filename.endswith('.decrypted'):
+            filename = filename.rsplit('.decrypted', 1)[0]
+
+        # Trả về file đã giải mã với tên gốc
+        return send_file(decrypted_file_path, as_attachment=True, download_name=filename)
     
     return '''
         <h1>Tải xuống file</h1>
@@ -118,7 +123,6 @@ def download_file():
             <input type="submit" value="Tải xuống file" />
         </form>
     '''
-
 @app.route('/client', methods=['GET', 'POST'])
 def client():
     """
