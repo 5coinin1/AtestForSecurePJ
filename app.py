@@ -1,4 +1,3 @@
-import io
 import os
 import hashlib
 from werkzeug.utils import secure_filename
@@ -49,10 +48,6 @@ def safe_filename(filename):
 def load_public_key(public_key_pem: bytes):
     return serialization.load_pem_public_key(public_key_pem, backend=None)
 
-# Hàm tải private key từ dữ liệu
-def load_private_key(private_key_pem: bytes):
-    return serialization.load_pem_private_key(private_key_pem, password=None, backend=default_backend())
-
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -82,26 +77,54 @@ def upload_file():
         return jsonify({"error": f"Đã có lỗi xảy ra: {str(e)}"}), 500
 
 
-@app.route('/download/<file_id>', methods=['GET'])
-def download_file(file_id):
-    try:
-        # Tìm file trong cơ sở dữ liệu theo ID
-        file_record = FileRecord.query.filter_by(id=file_id).first()
+@app.route('/download', methods=['GET', 'POST'])
+def download_file():
+    """
+    Tải xuống file đã mã hóa bằng private key và key từ người dùng
+    """
+    if request.method == 'POST':
+        file_key = request.form.get('key')
+        private_key_file = request.files.get('private_key')
+
+        if not file_key or not private_key_file:
+            return jsonify({"error": "Vui lòng cung cấp key và private key"}), 400
+
+        # Đọc private key từ file PEM
+        try:
+            private_key_pem = private_key_file.read()
+            private_key = serialization.load_pem_private_key(
+                private_key_pem, password=None, backend=default_backend()
+            )
+        except Exception as e:
+            return jsonify({"error": f"Không thể giải mã private key: {str(e)}"}), 400
+
+        # Tìm file trong cơ sở dữ liệu dựa trên file_key
+        file_record = FileRecord.query.filter_by(key=file_key).first()
         if not file_record:
-            return jsonify({"error": "Không tìm thấy file"}), 404
+            return jsonify({"error": "Không tìm thấy file với key này"}), 404
 
-        # Lấy đường dẫn đến file đã mã hóa
-        encrypted_file_path = file_record.file_path
+        # Đường dẫn file giải mã tạm thời
+        decrypted_file_path = file_record.file_path.replace('.enc', '.decrypted')
 
-        # Đọc file mã hóa
-        with open(encrypted_file_path, 'rb') as f:
-            encrypted_data = f.read()
+        # Giải mã file
+        try:
+            decrypt_file(file_path=file_record.file_path, private_key=private_key, output_path=decrypted_file_path)
+        except Exception as e:
+            return jsonify({"error": "Sai private key hoặc file không hợp lệ"}), 403
 
-        # Trả file đã mã hóa về cho client
-        return send_file(io.BytesIO(encrypted_data), as_attachment=True, download_name=file_record.file_name)
-
-    except Exception as e:
-        return jsonify({"error": f"Đã có lỗi xảy ra: {str(e)}"}), 500
+        # Trả về file đã giải mã
+        return send_file(decrypted_file_path, as_attachment=True)
+    
+    return '''
+        <h1>Tải xuống file</h1>
+        <form action="/download" method="post" enctype="multipart/form-data">
+            <label for="key">Key:</label>
+            <input type="text" name="key" id="key" required /><br><br>
+            <label for="private_key">Chọn private key (file PEM):</label>
+            <input type="file" name="private_key" id="private_key" required /><br><br>
+            <input type="submit" value="Tải xuống file" />
+        </form>
+    '''
 
 @app.route('/client', methods=['GET', 'POST'])
 def client():
