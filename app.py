@@ -4,8 +4,6 @@ from werkzeug.utils import secure_filename
 from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-from dotenv import load_dotenv
-load_dotenv()
 
 from encryption_utils import encrypt_file
 from encryption_utils import decrypt_file
