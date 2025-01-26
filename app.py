@@ -63,11 +63,15 @@ def upload_file():
         # Tải public key từ dữ liệu
         public_key = load_public_key(public_key_pem)
 
+        # Lưu file tải lên vào một đường dẫn tạm thời
+        temp_file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
+        file.save(temp_file_path)  # Lưu file vào ổ đĩa
+
         # Đường dẫn file mã hóa
         encrypted_file_path = os.path.join(UPLOAD_FOLDER, file.filename + '.enc')
 
-        # Mã hóa file bằng public key và không cần mật khẩu
-        encrypt_file(file_path=file, public_key=public_key, output_path=encrypted_file_path)
+        # Mã hóa file bằng public key
+        encrypt_file(file_path=temp_file_path, public_key=public_key, output_path=encrypted_file_path)
 
         # Tạo key cho file
         key = generate_key()
@@ -77,11 +81,14 @@ def upload_file():
         db.session.add(file_record)
         db.session.commit()
 
+        # Xóa file tạm sau khi mã hóa xong (có thể tùy chọn, nếu không cần giữ lại file gốc)
+        os.remove(temp_file_path)
+
         return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
 
     except Exception as e:
         return jsonify({"error": f"Đã có lỗi xảy ra: {str(e)}"}), 500
-
+    
 @app.route('/download', methods=['GET', 'POST'])
 def download_file():
     """
