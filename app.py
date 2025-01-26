@@ -50,8 +50,8 @@ def load_public_key(public_key_pem: bytes):
     return serialization.load_pem_public_key(public_key_pem, backend=None)
 
 # Hàm tải private key từ dữ liệu
-def load_private_key(private_key_pem: bytes, password: bytes = None):
-    return serialization.load_pem_private_key(private_key_pem, password=password, backend=None)
+def load_private_key(private_key_pem: bytes):
+    return serialization.load_pem_private_key(private_key_pem, password=None, backend=default_backend())
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
