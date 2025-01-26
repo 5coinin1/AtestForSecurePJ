@@ -1,10 +1,14 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import simpledialog
-import pyperclip
 import requests
 import sys
 import io
+import os
+
+from encryption_utils import encrypt_file
+from encryption_utils import decrypt_file
+from app import load_public_key
 
 # Thay đổi mã hóa đầu ra của stdout thành utf-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -13,9 +17,8 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 UPLOAD_URL = "https://atestforsecurepj.onrender.com/upload"
 DOWNLOAD_URL = "https://atestforsecurepj.onrender.com/download"
 
-
 def upload_file():
-    """Tải lên file lên server."""
+    """Tải lên file đã mã hóa lên server."""
     messagebox.showinfo("Chọn File", "Vui lòng chọn file để tải lên.")
     file_path = filedialog.askopenfilename(title="Chọn file để tải lên")
     if not file_path:
@@ -29,34 +32,35 @@ def upload_file():
         return
 
     try:
-        with open(file_path, 'rb') as file, open(public_key_path, 'rb') as public_key:
-            files = {'file': file, 'public_key': public_key}
+        # Đọc public key từ file
+        with open(public_key_path, 'rb') as pub_key_file:
+            public_key_pem = pub_key_file.read()
+            public_key = load_public_key(public_key_pem)  # Giả sử có hàm load_public_key
+
+        # Tạo tên file mã hóa
+        encrypted_file_path = file_path + '.enc'
+
+        # Mã hóa file trước khi tải lên
+        encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
+
+        # Gửi file đã mã hóa lên server
+        with open(encrypted_file_path, 'rb') as encrypted_file:
+            files = {'file': encrypted_file}
             response = requests.post(UPLOAD_URL, files=files)
 
             if response.status_code == 200:
-                # Lấy thông tin từ phản hồi của server
-                response_data = response.json()
-                key = response_data.get('key', None)
-
+                # Lấy key từ server nếu có
+                key = response.json().get('key')
                 if key:
-                    # Sao chép key vào clipboard
-                    pyperclip.copy(key)
-                    
                     # Lưu key vào file
-                    key_file_path = f"{file_path}.key.txt"
-                    with open(key_file_path, 'w') as key_file:
+                    with open("key.txt", "w") as key_file:
                         key_file.write(key)
-                    
-                    messagebox.showinfo(
-                        "Thành công",
-                        f"File đã được tải lên thành công!\n"
-                        f"Key: {key}\n\n"
-                        f"Key đã được sao chép vào clipboard và lưu tại:\n{key_file_path}"
-                    )
-                else:
-                    messagebox.showinfo("Thành công", "File đã được tải lên thành công nhưng không có key trả về.")
+                    messagebox.showinfo("Thành công", "File đã được mã hóa và tải lên thành công!")
             else:
                 messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
+        
+        # Xóa file đã mã hóa sau khi tải lên (nếu không cần lưu)
+        os.remove(encrypted_file_path)
 
     except Exception as e:
         messagebox.showerror("Lỗi", f"Không thể tải lên file: {str(e)}")

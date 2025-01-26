@@ -50,45 +50,33 @@ def load_public_key(public_key_pem: bytes):
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files or 'public_key' not in request.files:
-        return jsonify({"error": "Không có file hoặc public key trong yêu cầu"}), 400
+    if 'file' not in request.files:
+        return jsonify({"error": "Không có file trong yêu cầu"}), 400
 
     file = request.files['file']
-    public_key_pem = request.files['public_key'].read()
 
     if file.filename == '':
         return jsonify({"error": "Không có file được chọn"}), 400
 
     try:
-        # Tải public key từ dữ liệu
-        public_key = load_public_key(public_key_pem)
+        # Lưu file đã mã hóa vào server
+        encrypted_file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(encrypted_file_path)
 
-        # Lưu file tải lên vào một đường dẫn tạm thời
-        temp_file_path = os.path.join(UPLOAD_FOLDER, secure_filename(file.filename))
-        file.save(temp_file_path)  # Lưu file vào ổ đĩa
-
-        # Đường dẫn file mã hóa
-        encrypted_file_path = os.path.join(UPLOAD_FOLDER, file.filename + '.enc')
-
-        # Mã hóa file bằng public key
-        encrypt_file(file_path=temp_file_path, public_key=public_key, output_path=encrypted_file_path)
-
-        # Tạo key cho file
+        # Tạo key (có thể là một key ngẫu nhiên hoặc lấy từ cơ sở dữ liệu)
         key = generate_key()
 
-        # Lưu thông tin file vào cơ sở dữ liệu
+        # Lưu thông tin file vào cơ sở dữ liệu (nếu cần)
         file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
         db.session.add(file_record)
         db.session.commit()
 
-        # Xóa file tạm sau khi mã hóa xong (có thể tùy chọn, nếu không cần giữ lại file gốc)
-        os.remove(temp_file_path)
-
-        return jsonify({"message": "File đã được mã hóa và tải lên thành công!", "key": key})
+        return jsonify({"message": "File đã được tải lên thành công!", "key": key})
 
     except Exception as e:
         return jsonify({"error": f"Đã có lỗi xảy ra: {str(e)}"}), 500
-    
+
+
 @app.route('/download', methods=['GET', 'POST'])
 def download_file():
     """
