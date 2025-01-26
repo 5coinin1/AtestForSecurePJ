@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import simpledialog
+import pyperclip
 import requests
 import sys
 import io
@@ -54,7 +55,16 @@ def upload_file():
                     # Lưu key vào file
                     with open("key.txt", "w") as key_file:
                         key_file.write(key)
-                    messagebox.showinfo("Thành công", "File đã được mã hóa và tải lên thành công!")
+
+                    # Hiển thị key trong hộp thoại thông báo
+                    messagebox.showinfo("Thành công", f"File đã được mã hóa và tải lên thành công!\nKey: {key}")
+
+                    # Lưu key vào clipboard
+                    pyperclip.copy(key)
+
+                    # Thông báo về việc đã sao chép key vào clipboard
+                    messagebox.showinfo("Key đã được sao chép", "Key đã được sao chép vào clipboard!")
+
             else:
                 messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
         
