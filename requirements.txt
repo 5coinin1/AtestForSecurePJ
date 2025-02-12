@@ -6,4 +6,4 @@ psycopg2-binary
 cryptography
 pyperclip
 customtkinter
-dotenv
+Pillow

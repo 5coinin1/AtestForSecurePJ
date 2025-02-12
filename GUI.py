@@ -7,15 +7,12 @@ import sys
 import io
 import os
 
-from dotenv import load_dotenv
 import customtkinter as ctk
 from cryptography.hazmat.primitives import serialization
 from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save_private_key, save_public_key
 
 # Thay đổi mã hóa đầu ra của stdout thành utf-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
-load_dotenv()  # Tải các biến môi trường từ file .env
 
 # URL của server Flask (phải thay đổi nếu sử dụng server khác)
 UPLOAD_URL = os.environ.get("UPLOAD_URL")
@@ -25,78 +22,18 @@ DOWNLOAD_URL = os.environ.get("DOWNLOAD_URL")
 def load_public_key(public_key_pem: bytes):
     return serialization.load_pem_public_key(public_key_pem, backend=None)
 
-def custom_showinfo(title, message):
-    """Hiển thị hộp thoại thông báo với CTkLabel, tự động xuống dòng với wraplength."""
-    dialog = ctk.CTkToplevel()
-    dialog.title(title)
-    dialog.geometry("500x400")
-    dialog.resizable(True, True)
-
-    # Sử dụng CTkLabel với wraplength để tự động xuống dòng
-    label = ctk.CTkLabel(dialog, text=message, font=("Helvetica", 14), wraplength=450)
-    label.pack(pady=20, padx=20, fill="both", expand=True)
-
-    button = ctk.CTkButton(dialog, text="OK", command=dialog.destroy, font=("Helvetica", 14))
-    button.pack(pady=10)
-
-    dialog.grab_set()
-    dialog.wait_window()
-    
-def custom_showerror(title, message):
-    """Hiển thị hộp thoại lỗi (Error) theo giao diện CustomTkinter."""
-    dialog = ctk.CTkToplevel()
-    dialog.title(title)
-    dialog.geometry("400x200")
-    dialog.resizable(False, False)
-
-    label = ctk.CTkLabel(dialog, text=message, font=("Helvetica", 14), text_color="red")
-    label.pack(pady=20, padx=20)
-
-    button = ctk.CTkButton(dialog, text="OK", command=dialog.destroy, font=("Helvetica", 14))
-    button.pack(pady=10)
-
-    dialog.grab_set()
-    dialog.wait_window()
-
-def custom_askstring(title, prompt):
-    """Hiển thị hộp thoại nhập chuỗi tùy chỉnh và trả về giá trị người dùng nhập."""
-    dialog = ctk.CTkToplevel()
-    dialog.title(title)
-    dialog.geometry("400x200")
-    dialog.resizable(False, False)
-
-    label = ctk.CTkLabel(dialog, text=prompt, font=("Helvetica", 14))
-    label.pack(pady=10, padx=20)
-
-    entry = ctk.CTkEntry(dialog, font=("Helvetica", 14))
-    entry.pack(pady=10, padx=20, fill="x")
-
-    result = {"value": None}
-
-    def on_ok():
-        result["value"] = entry.get()
-        dialog.destroy()
-
-    ok_button = ctk.CTkButton(dialog, text="OK", command=on_ok, font=("Helvetica", 14))
-    ok_button.pack(pady=10)
-
-    dialog.grab_set()
-    dialog.wait_window()
-    return result["value"]
-
 def upload_file():
     """Tải lên file đã mã hóa lên server."""
-    # Sử dụng hộp thoại tuỳ chỉnh để thông báo cho người dùng
-    custom_showinfo("Chọn File", "Vui lòng chọn file để tải lên.")
+    messagebox.showinfo("Chọn File", "Vui lòng chọn file để tải lên.")
     file_path = filedialog.askopenfilename(title="Chọn file để tải lên")
     if not file_path:
-        custom_showerror("Lỗi", "Bạn chưa chọn file!")
+        messagebox.showerror("Lỗi", "Bạn chưa chọn file!")
         return
 
-    custom_showinfo("Chọn Public Key", "Vui lòng chọn file public key.")
+    messagebox.showinfo("Chọn Public Key", "Vui lòng chọn file public key.")
     public_key_path = filedialog.askopenfilename(title="Chọn file public key")
     if not public_key_path:
-        custom_showerror("Lỗi", "Bạn chưa chọn file public key!")
+        messagebox.showerror("Lỗi", "Bạn chưa chọn file public key!")
         return
 
     try:
@@ -125,33 +62,34 @@ def upload_file():
                         key_file.write(key)
 
                     # Hiển thị key trong hộp thoại thông báo
-                    custom_showinfo("Thành công", f"File đã được mã hóa và tải lên thành công!\nKey: {key}")
+                    messagebox.showinfo("Thành công", f"File đã được mã hóa và tải lên thành công!\nKey: {key}")
 
                     # Lưu key vào clipboard
                     pyperclip.copy(key)
 
                     # Thông báo về việc đã sao chép key vào clipboard
-                    custom_showinfo("Key đã được sao chép", "Key đã được sao chép vào clipboard!")
+                    messagebox.showinfo("Key đã được sao chép", "Key đã được sao chép vào clipboard!")
+
             else:
-                custom_showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
+                messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
         
         # Xóa file đã mã hóa sau khi tải lên (nếu không cần lưu)
         os.remove(encrypted_file_path)
 
     except Exception as e:
-        custom_showerror("Lỗi", f"Không thể tải lên file: {str(e)}")
-        
+        messagebox.showerror("Lỗi", f"Không thể tải lên file: {str(e)}")
+
 def download_file():
     """Tải xuống file đã giải mã từ server."""
-    file_key = custom_askstring("Nhập Key", "Vui lòng nhập key:")
+    file_key = simpledialog.askstring("Nhập Key", "Vui lòng nhập key:")
     if not file_key:
-        custom_showerror("Lỗi", "Bạn chưa nhập key!")
+        messagebox.showerror("Lỗi", "Bạn chưa nhập key!")
         return
 
-    custom_showinfo("Chọn Private Key", "Vui lòng chọn file private key (PEM).")
+    messagebox.showinfo("Chọn Private Key", "Vui lòng chọn file private key (PEM).")
     private_key_path = filedialog.askopenfilename(title="Chọn file private key (PEM)")
     if not private_key_path:
-        custom_showerror("Lỗi", "Bạn chưa chọn file private key!")
+        messagebox.showerror("Lỗi", "Bạn chưa chọn file private key!")
         return
 
     try:
@@ -177,17 +115,17 @@ def download_file():
                     filetypes=[("All Files", "*.*")]
                 )
                 if not save_path:
-                    custom_showinfo("Hủy", "Bạn đã hủy lưu file.")
+                    messagebox.showinfo("Hủy", "Bạn đã hủy lưu file.")
                     return
 
                 with open(save_path, 'wb') as f:
                     f.write(response.content)
 
-                custom_showinfo("Thành công", f"Tải xuống file thành công!\nFile được lưu tại: {save_path}")
+                messagebox.showinfo("Thành công", f"Tải xuống file thành công!\nFile được lưu tại: {save_path}")
             else:
-                custom_showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
+                messagebox.showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
     except Exception as e:
-        custom_showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
+        messagebox.showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
 
 def generate_keys():
     """Tạo cặp khóa công khai và riêng."""
