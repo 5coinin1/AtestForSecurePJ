@@ -7,15 +7,12 @@ import sys
 import io
 import os
 
-from dotenv import load_dotenv
 import customtkinter as ctk
 from cryptography.hazmat.primitives import serialization
 from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save_private_key, save_public_key
 
 # Thay đổi mã hóa đầu ra của stdout thành utf-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
-load_dotenv()  # Tải các biến môi trường từ file .env
 
 # URL của server Flask (phải thay đổi nếu sử dụng server khác)
 UPLOAD_URL = os.environ.get("UPLOAD_URL")
@@ -29,6 +26,7 @@ def custom_showinfo(title, message):
     """Hiển thị hộp thoại thông báo với CTkLabel, tự động xuống dòng với wraplength."""
     dialog = ctk.CTkToplevel()
     dialog.title(title)
+    # Tăng kích thước cửa sổ để chứa được nhiều nội dung hơn
     dialog.geometry("500x400")
     dialog.resizable(True, True)
 
@@ -41,9 +39,9 @@ def custom_showinfo(title, message):
 
     dialog.grab_set()
     dialog.wait_window()
-    
+
 def custom_showerror(title, message):
-    """Hiển thị hộp thoại lỗi (Error) theo giao diện CustomTkinter."""
+    """Hiển thị hộp thoại lỗi (Error) tùy chỉnh."""
     dialog = ctk.CTkToplevel()
     dialog.title(title)
     dialog.geometry("400x200")
@@ -188,7 +186,7 @@ def download_file():
                 custom_showerror("Lỗi", response.json().get('error', 'Không rõ lỗi'))
     except Exception as e:
         custom_showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
-
+    
 def generate_keys():
     """Tạo cặp khóa công khai và riêng."""
     try:
