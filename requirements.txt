@@ -7,3 +7,4 @@ cryptography
 pyperclip
 customtkinter
 Pillow
+dotenv
