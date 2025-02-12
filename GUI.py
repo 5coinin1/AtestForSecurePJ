@@ -7,12 +7,15 @@ import sys
 import io
 import os
 
+from dotenv import load_dotenv
 import customtkinter as ctk
 from cryptography.hazmat.primitives import serialization
 from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save_private_key, save_public_key
 
 # Thay đổi mã hóa đầu ra của stdout thành utf-8
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+load_dotenv()  # Tải các biến môi trường từ file .env
 
 # URL của server Flask (phải thay đổi nếu sử dụng server khác)
 UPLOAD_URL = os.environ.get("UPLOAD_URL")
