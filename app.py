@@ -9,7 +9,7 @@ from encryption_utils import encrypt_file
 from encryption_utils import decrypt_file
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
-from main import load_public_key
+from GUI import load_public_key
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
