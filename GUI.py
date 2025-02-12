@@ -7,6 +7,7 @@ import sys
 import io
 import os
 
+import customtkinter as ctk
 from cryptography.hazmat.primitives import serialization
 from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save_private_key, save_public_key
 
@@ -14,8 +15,8 @@ from encryption_utils import encrypt_file, decrypt_file, generate_key_pair, save
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # URL của server Flask (phải thay đổi nếu sử dụng server khác)
-UPLOAD_URL = "https://atestforsecurepj.onrender.com/upload"
-DOWNLOAD_URL = "https://atestforsecurepj.onrender.com/download"
+UPLOAD_URL = os.environ.get("UPLOAD_URL")
+DOWNLOAD_URL = os.environ.get("DOWNLOAD_URL")
 
 # Hàm tải public key từ dữ liệu
 def load_public_key(public_key_pem: bytes):
@@ -141,22 +142,67 @@ def generate_keys():
 
 # Tạo GUI
 def create_gui():
-    root = tk.Tk()
-    root.title("Ứng dụng Tải Lên và Tải Xuống File")
+    ctk.set_appearance_mode("dark")
 
-    # Tạo button upload
-    upload_btn = tk.Button(root, text="Tải lên file", command=upload_file)
+    # Tạo cửa sổ chính
+    root = ctk.CTk()
+    root.title("Ứng dụng Tải Lên và Tải Xuống File")
+    root.geometry("400x300")
+
+    # Tạo một frame trung tâm để chứa các nút
+    frame = ctk.CTkFrame(root)
+    frame.pack(pady=40, padx=40, fill="both", expand=True)
+
+    button_font = ("Papyrus", 14, "bold")
+
+    # Tạo nút "Tải lên file"
+    upload_btn = ctk.CTkButton(
+        frame,
+        text="Tải lên file",
+        command=upload_file,
+        width=200,
+        height=50,
+        corner_radius=20,       # Bo tròn các góc
+        fg_color="#4CAF50",     # Màu nền ban đầu (xanh lá)
+        hover_color="#388E3C",  # Màu nền khi hover (tối hơn)
+        border_width=2,         # Độ dày viền
+        border_color="#FFC107", # Màu viền (vàng tương phản)
+        font=button_font        # Font chữ và cỡ chữ
+    )
     upload_btn.pack(pady=10)
 
-    # Tạo button download
-    download_button = tk.Button(root, text="Tải xuống File", command=download_file)
-    download_button.pack(pady=20)
+    # Tạo nút "Tải xuống file"
+    download_btn = ctk.CTkButton(
+        frame,
+        text="Tải xuống file",
+        command=download_file,
+        width=200,
+        height=50,
+        corner_radius=20,
+        fg_color="#2196F3",     # Màu nền ban đầu (xanh dương)
+        hover_color="#1976D2",  # Màu nền khi hover (tối hơn)
+        border_width=2,
+        border_color="#FF5722", # Màu viền (cam tương phản)
+        font=button_font
+    )
+    download_btn.pack(pady=10)
 
-    # Tạo button tạo cặp khóa
-    generate_keys_btn = tk.Button(root, text="Tạo Cặp Khóa", command=generate_keys)
-    generate_keys_btn.pack(pady=20)
+    # Tạo nút "Tạo Cặp Khóa"
+    generate_keys_btn = ctk.CTkButton(
+        frame,
+        text="Tạo Cặp Khóa",
+        command=generate_keys,
+        width=200,
+        height=50,
+        corner_radius=20,
+        fg_color="#F44336",     # Màu nền ban đầu (đỏ)
+        hover_color="#D32F2F",  # Màu nền khi hover (tối hơn)
+        border_width=2,
+        border_color="#4CAF50", # Màu viền (xanh lá tương phản)
+        font=button_font
+    )
+    generate_keys_btn.pack(pady=10)
 
-    # Chạy ứng dụng GUI
     root.mainloop()
 
 # Chạy ứng dụng

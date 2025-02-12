@@ -5,3 +5,5 @@ Flask-SQLAlchemy
 psycopg2-binary
 cryptography
 pyperclip
+customtkinter
+Pillow

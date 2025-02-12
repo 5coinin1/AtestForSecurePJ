@@ -64,6 +64,9 @@ def upload_file():
         db.session.add(file_record)
         db.session.commit()
 
+        # Xóa file gốc sau khi upload xong
+        os.remove(encrypted_file_path)
+
         return jsonify({"message": "File đã được tải lên thành công!", "key": key})
 
     except Exception as e:
@@ -112,6 +115,14 @@ def download_file():
 
         # Trả về file đã giải mã với tên gốc
         return send_file(decrypted_file_path, as_attachment=True, download_name=filename)
+
+        # Trả về file đã giải mã với tên gốc
+        response = send_file(decrypted_file_path, as_attachment=True, download_name=filename)
+
+        # Xóa file sau khi gửi
+        os.remove(decrypted_file_path)
+
+        return response
     
     return '''
         <h1>Tải xuống file</h1>
@@ -147,6 +158,9 @@ def client():
                 # Mã hóa file bằng public key
                 encrypted_file_path = file_path + '.enc'
                 encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
+
+                #Xóa file gốc sau khi mã hóa 
+                os.remove(file_path)
 
                 # Lưu thông tin vào cơ sở dữ liệu
                 file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
