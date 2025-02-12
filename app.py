@@ -10,6 +10,9 @@ from encryption_utils import decrypt_file
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from GUI import load_public_key
+from dotenv import load_dotenv
+
+load_dotenv()  # Tải các biến môi trường từ file .env
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
