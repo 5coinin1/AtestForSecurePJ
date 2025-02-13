@@ -108,9 +108,8 @@ def download_file():
         # Gửi file cho người dùng
         response = send_file(decrypted_file_path, as_attachment=True, download_name=filename)
 
-        # Xóa cả file gốc và file giải mã sau khi gửi
+        # Xóa file giải mã sau khi gửi
         os.remove(decrypted_file_path)
-        os.remove(encrypted_file_path)
 
         return response
 
