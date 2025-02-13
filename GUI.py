@@ -7,6 +7,7 @@ import sys
 import io
 import os
 
+from PIL import Image
 from dotenv import load_dotenv
 import customtkinter as ctk
 from cryptography.hazmat.primitives import serialization
@@ -218,6 +219,11 @@ def create_gui():
 
     button_font = ("Papyrus", 14, "bold")
 
+    # Load icon cho từng nút
+    upload_icon = ctk.CTkImage(light_image=Image.open(r"C:\Users\lenovo\Desktop\new project\PythonPJ\AtestForSecurePJ\icons\upload.png"), size=(25, 25))
+    download_icon = ctk.CTkImage(light_image=Image.open(r"C:\Users\lenovo\Desktop\new project\PythonPJ\AtestForSecurePJ\icons\download.png"), size=(25, 25))
+    key_icon = ctk.CTkImage(light_image=Image.open(r"C:\Users\lenovo\Desktop\new project\PythonPJ\AtestForSecurePJ\icons\key.png"), size=(25, 25))
+
     # Tạo nút "Tải lên file"
     upload_btn = ctk.CTkButton(
         frame,
@@ -225,14 +231,16 @@ def create_gui():
         command=upload_file,
         width=200,
         height=50,
-        corner_radius=20,       # Bo tròn các góc
-        fg_color="#4CAF50",     # Màu nền ban đầu (xanh lá)
-        hover_color="#388E3C",  # Màu nền khi hover (tối hơn)
-        border_width=2,         # Độ dày viền
-        border_color="#FFC107", # Màu viền (vàng tương phản)
-        font=button_font        # Font chữ và cỡ chữ
+        corner_radius=20,
+        fg_color="#4CAF50",
+        hover_color="#388E3C",
+        border_width=2,
+        border_color="#FFC107",
+        font=button_font,
+        image=upload_icon,  # Gán icon
+        compound="left"  # Icon bên trái chữ
     )
-    upload_btn.pack(pady=10)
+    upload_btn.pack(pady=10, padx=10)  # Thêm padding ở đây
 
     # Tạo nút "Tải xuống file"
     download_btn = ctk.CTkButton(
@@ -242,13 +250,15 @@ def create_gui():
         width=200,
         height=50,
         corner_radius=20,
-        fg_color="#2196F3",     # Màu nền ban đầu (xanh dương)
-        hover_color="#1976D2",  # Màu nền khi hover (tối hơn)
+        fg_color="#2196F3",
+        hover_color="#1976D2",
         border_width=2,
-        border_color="#FF5722", # Màu viền (cam tương phản)
-        font=button_font
+        border_color="#FF5722",
+        font=button_font,
+        image=download_icon,  
+        compound="left"
     )
-    download_btn.pack(pady=10)
+    download_btn.pack(pady=10, padx=10)
 
     # Tạo nút "Tạo Cặp Khóa"
     generate_keys_btn = ctk.CTkButton(
@@ -258,14 +268,15 @@ def create_gui():
         width=200,
         height=50,
         corner_radius=20,
-        fg_color="#F44336",     # Màu nền ban đầu (đỏ)
-        hover_color="#D32F2F",  # Màu nền khi hover (tối hơn)
+        fg_color="#F44336",
+        hover_color="#D32F2F",
         border_width=2,
-        border_color="#4CAF50", # Màu viền (xanh lá tương phản)
-        font=button_font
+        border_color="#4CAF50",
+        font=button_font,
+        image=key_icon,  
+        compound="left"
     )
-    generate_keys_btn.pack(pady=10)
-
+    generate_keys_btn.pack(pady=10, padx=10)
     root.mainloop()
 
 # Chạy ứng dụng
