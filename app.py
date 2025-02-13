@@ -72,9 +72,6 @@ def upload_file():
 
 @app.route('/download', methods=['GET', 'POST'])
 def download_file():
-    """
-    Tải xuống file đã mã hóa bằng private key và key từ người dùng
-    """
     if request.method == 'POST':
         file_key = request.form.get('key')
         private_key_file = request.files.get('private_key')
@@ -91,28 +88,32 @@ def download_file():
         except Exception as e:
             return jsonify({"error": f"Không thể giải mã private key: {str(e)}"}), 400
 
-        # Tìm file trong cơ sở dữ liệu dựa trên file_key
+        # Tìm file trong cơ sở dữ liệu
         file_record = FileRecord.query.filter_by(key=file_key).first()
         if not file_record:
             return jsonify({"error": "Không tìm thấy file với key này"}), 404
 
-        # Đường dẫn file giải mã tạm thời
-        decrypted_file_path = file_record.file_path.replace('.enc', '.decrypted')
+        encrypted_file_path = file_record.file_path
+        decrypted_file_path = encrypted_file_path.replace('.enc', '.decrypted')
 
         # Giải mã file
         try:
-            decrypt_file(file_path=file_record.file_path, private_key=private_key, output_path=decrypted_file_path)
+            decrypt_file(file_path=encrypted_file_path, private_key=private_key, output_path=decrypted_file_path)
         except Exception as e:
             return jsonify({"error": "Sai private key hoặc file không hợp lệ"}), 403
 
-        # Lấy tên file gốc (bỏ phần mở rộng .decrypted)
-        filename = os.path.basename(decrypted_file_path)
-        if filename.endswith('.decrypted'):
-            filename = filename.rsplit('.decrypted', 1)[0]
+        # Lấy tên file gốc
+        filename = os.path.basename(decrypted_file_path).replace('.decrypted', '')
 
-        # Trả về file đã giải mã với tên gốc
-        return send_file(decrypted_file_path, as_attachment=True, download_name=filename)
-    
+        # Gửi file cho người dùng
+        response = send_file(decrypted_file_path, as_attachment=True, download_name=filename)
+
+        # Xóa cả file gốc và file giải mã sau khi gửi
+        os.remove(decrypted_file_path)
+        os.remove(encrypted_file_path)
+
+        return response
+
     return '''
         <h1>Tải xuống file</h1>
         <form action="/download" method="post" enctype="multipart/form-data">
@@ -147,6 +148,10 @@ def client():
                 # Mã hóa file bằng public key
                 encrypted_file_path = file_path + '.enc'
                 encrypt_file(file_path=file_path, public_key=public_key, output_path=encrypted_file_path)
+
+                # Xóa file gốc sau khi mã hóa thành công
+                if os.path.exists(file_path):
+                    os.remove(file_path)
 
                 # Lưu thông tin vào cơ sở dữ liệu
                 file_record = FileRecord(file_name=file.filename, file_path=encrypted_file_path, key=key)
