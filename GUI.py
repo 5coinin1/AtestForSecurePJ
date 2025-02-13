@@ -7,6 +7,7 @@ import sys
 import io
 import os
 
+import threading
 from PIL import Image
 from dotenv import load_dotenv
 import customtkinter as ctk
@@ -26,62 +27,156 @@ DOWNLOAD_URL = os.environ.get("DOWNLOAD_URL")
 def load_public_key(public_key_pem: bytes):
     return serialization.load_pem_public_key(public_key_pem, backend=None)
 
-def custom_showinfo(title, message):
-    """Hiển thị hộp thoại thông báo với CTkLabel, tự động xuống dòng với wraplength."""
+def custom_showinfo(title, message, icon="info"):
+    """Hiển thị hộp thoại thông báo với UI đẹp, hiệu ứng động."""
     dialog = ctk.CTkToplevel()
     dialog.title(title)
-    # Tăng kích thước cửa sổ để chứa được nhiều nội dung hơn
-    dialog.geometry("500x400")
-    dialog.resizable(True, True)
+    dialog.geometry("450x250")
+    dialog.resizable(False, False)
+    dialog.configure(fg_color="#2C2F33")  # Màu nền tối hiện đại
+    dialog.attributes("-alpha", 0)  # Bắt đầu với hiệu ứng fade-in
 
-    # Sử dụng CTkLabel với wraplength để tự động xuống dòng
-    label = ctk.CTkLabel(dialog, text=message, font=("Helvetica", 14), wraplength=450)
-    label.pack(pady=20, padx=20, fill="both", expand=True)
+    # Biểu tượng cho thông báo
+    icons = {
+        "info": "🛈",   # Thông tin
+        "success": "✔", # Thành công
+        "error": "✖",   # Lỗi
+        "warning": "⚠"  # Cảnh báo
+    }
+    icon_text = icons.get(icon, "🛈")
 
-    button = ctk.CTkButton(dialog, text="OK", command=dialog.destroy, font=("Helvetica", 14))
-    button.pack(pady=10)
+    # Hiển thị icon và tiêu đề
+    frame = ctk.CTkFrame(dialog, fg_color="#23272A", corner_radius=10)
+    frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+    icon_label = ctk.CTkLabel(frame, text=icon_text, font=("Arial", 36), text_color="#FFD700")
+    icon_label.pack(pady=(10, 5))
+
+    label = ctk.CTkLabel(frame, text=message, font=("Arial", 14), wraplength=400, justify="center")
+    label.pack(pady=10, padx=20)
+
+    # Nút OK với hiệu ứng hover
+    def on_hover(event):
+        button.configure(fg_color="#1E90FF")
+
+    def on_leave(event):
+        button.configure(fg_color="#5865F2")
+
+    button = ctk.CTkButton(frame, text="OK", font=("Arial", 14, "bold"), corner_radius=20, 
+                           fg_color="#5865F2", text_color="white", hover_color="#1E90FF",
+                           command=dialog.destroy)
+    button.pack(pady=15)
+    button.bind("<Enter>", on_hover)
+    button.bind("<Leave>", on_leave)
+
+    # Hiệu ứng fade-in
+    for i in range(0, 11):
+        dialog.attributes("-alpha", i / 10)
+        dialog.update_idletasks()
+        dialog.after(30)
 
     dialog.grab_set()
     dialog.wait_window()
 
 def custom_showerror(title, message):
-    """Hiển thị hộp thoại lỗi (Error) tùy chỉnh."""
+    """Hiển thị hộp thoại lỗi (Error) với UI đẹp, hiệu ứng động."""
     dialog = ctk.CTkToplevel()
     dialog.title(title)
-    dialog.geometry("400x200")
+    dialog.geometry("450x250")
     dialog.resizable(False, False)
+    dialog.configure(fg_color="#2C2F33")  # Màu nền tối
+    dialog.attributes("-alpha", 0)  # Bắt đầu với hiệu ứng fade-in
 
-    label = ctk.CTkLabel(dialog, text=message, font=("Helvetica", 14), text_color="red")
-    label.pack(pady=20, padx=20)
+    # Khung chứa nội dung
+    frame = ctk.CTkFrame(dialog, fg_color="#23272A", corner_radius=10)
+    frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-    button = ctk.CTkButton(dialog, text="OK", command=dialog.destroy, font=("Helvetica", 14))
-    button.pack(pady=10)
+    # Biểu tượng lỗi (màu đỏ)
+    icon_label = ctk.CTkLabel(frame, text="✖", font=("Arial", 36), text_color="red")
+    icon_label.pack(pady=(10, 5))
+
+    # Nội dung lỗi
+    label = ctk.CTkLabel(frame, text=message, font=("Arial", 14), wraplength=400, justify="center", text_color="white")
+    label.pack(pady=10, padx=20)
+
+    # Nút OK với hiệu ứng hover
+    def on_hover(event):
+        button.configure(fg_color="#FF6347")  # Đổi sang màu cam đỏ
+
+    def on_leave(event):
+        button.configure(fg_color="#FF0000")  # Quay lại màu đỏ
+
+    button = ctk.CTkButton(frame, text="OK", font=("Arial", 14, "bold"), corner_radius=20, 
+                           fg_color="#FF0000", text_color="white", hover_color="#FF6347",
+                           command=dialog.destroy)
+    button.pack(pady=15)
+    button.bind("<Enter>", on_hover)
+    button.bind("<Leave>", on_leave)
+
+    # Hiệu ứng fade-in
+    for i in range(0, 11):
+        dialog.attributes("-alpha", i / 10)
+        dialog.update_idletasks()
+        dialog.after(30)
 
     dialog.grab_set()
     dialog.wait_window()
 
 def custom_askstring(title, prompt):
-    """Hiển thị hộp thoại nhập chuỗi tùy chỉnh và trả về giá trị người dùng nhập."""
+    """Hiển thị hộp thoại nhập chuỗi với giao diện đẹp và hiệu ứng động."""
     dialog = ctk.CTkToplevel()
     dialog.title(title)
-    dialog.geometry("400x200")
+    dialog.geometry("450x250")
     dialog.resizable(False, False)
+    dialog.configure(fg_color="#2C2F33")  # Màu nền tối
+    dialog.attributes("-alpha", 0)  # Bắt đầu với hiệu ứng fade-in
 
-    label = ctk.CTkLabel(dialog, text=prompt, font=("Helvetica", 14))
-    label.pack(pady=10, padx=20)
+    # Khung chứa nội dung
+    frame = ctk.CTkFrame(dialog, fg_color="#23272A", corner_radius=10)
+    frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-    entry = ctk.CTkEntry(dialog, font=("Helvetica", 14))
-    entry.pack(pady=10, padx=20, fill="x")
+    # Tiêu đề
+    label = ctk.CTkLabel(frame, text=prompt, font=("Arial", 14), text_color="white", wraplength=400, justify="center")
+    label.pack(pady=15, padx=20)
+
+    # Ô nhập liệu với placeholder
+    entry = ctk.CTkEntry(frame, font=("Arial", 14), width=350, corner_radius=8, placeholder_text="Nhập vào đây...")
+    entry.pack(pady=5, padx=20)
 
     result = {"value": None}
 
+    # Xử lý khi nhấn OK
     def on_ok():
         result["value"] = entry.get()
         dialog.destroy()
 
-    ok_button = ctk.CTkButton(dialog, text="OK", command=on_ok, font=("Helvetica", 14))
-    ok_button.pack(pady=10)
+    # Xử lý khi nhấn Cancel
+    def on_cancel():
+        result["value"] = None
+        dialog.destroy()
 
+    # Nút OK & Cancel với hiệu ứng hover
+    button_frame = ctk.CTkFrame(frame, fg_color="transparent")
+    button_frame.pack(pady=15)
+
+    ok_button = ctk.CTkButton(button_frame, text="OK", font=("Arial", 14, "bold"), corner_radius=20,
+                              fg_color="#008CBA", hover_color="#0073A8", text_color="white", command=on_ok)
+    ok_button.pack(side="left", padx=10)
+
+    cancel_button = ctk.CTkButton(button_frame, text="Cancel", font=("Arial", 14), corner_radius=20,
+                                  fg_color="#FF4C4C", hover_color="#D43F3F", text_color="white", command=on_cancel)
+    cancel_button.pack(side="right", padx=10)
+
+    # Nhấn Enter để xác nhận
+    entry.bind("<Return>", lambda event: on_ok())
+
+    # Hiệu ứng fade-in
+    for i in range(0, 11):
+        dialog.attributes("-alpha", i / 10)
+        dialog.update_idletasks()
+        dialog.after(30)
+
+    entry.focus()  # Tự động focus vào ô nhập liệu
     dialog.grab_set()
     dialog.wait_window()
     return result["value"]
@@ -191,18 +286,76 @@ def download_file():
     except Exception as e:
         custom_showerror("Lỗi", f"Không thể tải xuống file: {str(e)}")
     
-def generate_keys():
-    """Tạo cặp khóa công khai và riêng."""
-    try:
-        private_key, public_key = generate_key_pair()
-        
-        # Lưu khóa vào file
-        save_private_key(private_key, 'private_key.pem')
-        save_public_key(public_key, 'public_key.pem')
-        
-        messagebox.showinfo("Thành công", "Cặp khóa đã được tạo và lưu vào file: private_key.pem và public_key.pem")
-    except Exception as e:
-        messagebox.showerror("Lỗi", f"Không thể tạo cặp khóa: {str(e)}")
+def generate_keys_ui():
+    """Hiển thị giao diện tạo khóa với UI đẹp, hiệu ứng động."""
+    dialog = ctk.CTkToplevel()
+    dialog.title("Tạo Cặp Khóa")
+    dialog.geometry("500x340")
+    dialog.resizable(False, False)
+    dialog.configure(fg_color="#2C2F33")  # Màu nền tối
+    dialog.attributes("-alpha", 0)  # Hiệu ứng fade-in ban đầu
+
+    # Frame chứa nội dung
+    frame = ctk.CTkFrame(dialog, fg_color="#23272A", corner_radius=12)
+    frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+    # Icon khóa 🔑
+    icon_label = ctk.CTkLabel(frame, text="🔑", font=("Arial", 50), text_color="#FFD700")
+    icon_label.pack(pady=(10, 5))
+
+    # Tiêu đề
+    title_label = ctk.CTkLabel(frame, text="Tạo Cặp Khóa RSA", font=("Arial", 16, "bold"), text_color="white")
+    title_label.pack()
+
+    # Khu vực hiển thị kết quả
+    result_label = ctk.CTkLabel(frame, text="", font=("Arial", 13), text_color="lightgreen", wraplength=460)
+    result_label.pack(pady=5)
+
+    path_label = ctk.CTkLabel(frame, text="", font=("Arial", 12), text_color="#1E90FF", wraplength=460, justify="center")
+    path_label.pack(pady=5)
+
+    # Hàm xử lý khi nhấn "Tạo Khóa"
+    def handle_generate_keys():
+        try:
+            private_key, public_key = generate_key_pair()
+            private_path = os.path.abspath('private_key.pem')
+            public_path = os.path.abspath('public_key.pem')
+
+            save_private_key(private_key, private_path)
+            save_public_key(public_key, public_path)
+
+            result_label.configure(text="✔ Cặp khóa đã tạo thành công!", text_color="lightgreen")
+            path_label.configure(
+                text=f"📂 Khóa riêng: {private_path}\n📂 Khóa công khai: {public_path}"
+            )
+        except Exception as e:
+            result_label.configure(text=f"❌ Lỗi: {str(e)}", text_color="red")
+            path_label.configure(text="")
+
+    # Nút "Tạo Khóa"
+    generate_button = ctk.CTkButton(
+        frame, text="Tạo Khóa", font=("Arial", 14, "bold"), corner_radius=20,
+        fg_color="#5865F2", text_color="white", hover_color="#1E90FF",
+        command=handle_generate_keys
+    )
+    generate_button.pack(pady=10)
+
+    # Nút "Đóng"
+    close_button = ctk.CTkButton(
+        frame, text="Đóng", font=("Arial", 14), corner_radius=20,
+        fg_color="#FF5555", text_color="white", hover_color="#D32F2F",
+        command=dialog.destroy
+    )
+    close_button.pack(pady=5)
+
+    # Hiệu ứng fade-in
+    for i in range(0, 11):
+        dialog.attributes("-alpha", i / 10)
+        dialog.update_idletasks()
+        dialog.after(30)
+
+    dialog.grab_set()
+    dialog.wait_window()
 
 # Tạo GUI
 def create_gui():
@@ -264,7 +417,7 @@ def create_gui():
     generate_keys_btn = ctk.CTkButton(
         frame,
         text="Tạo Cặp Khóa",
-        command=generate_keys,
+        command=generate_keys_ui,  # Gọi hàm giao diện thay vì generate_keys
         width=200,
         height=50,
         corner_radius=20,
