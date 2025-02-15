@@ -5,11 +5,10 @@ from flask import Flask, request, jsonify, send_file
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
-from encryption_utils import encrypt_file
-from encryption_utils import decrypt_file
+from encryption_utils import encrypt_file, decrypt_file
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
-from gui import load_public_key
+from file_services import load_public_key
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
