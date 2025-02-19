@@ -4,7 +4,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from aes import encrypt_cfb, decrypt_cfb
+from aes_module import encrypt_cfb, decrypt_cfb
 
 def generate_key_pair():
     """Tạo cặp khóa RSA (public key và private key)."""
