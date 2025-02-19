@@ -60,10 +60,3 @@ def decrypt_cfb(ciphertext: bytes, key: bytes, iv: bytes) -> bytes:
 
     return bytes(plaintext)
 
-# Kiểm thử
-plaintext = b"1234567890123456"  # 16 byte
-key = b"0123456789abcdef0123456789abcdef"  # 32 byte
-iv = b"abcdefghijklmnop"  # 16 byte
-
-ciphertext = encrypt_cfb(plaintext, key, iv)
-print("Ciphertext:", ciphertext.hex())
