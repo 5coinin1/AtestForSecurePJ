@@ -4,7 +4,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-
+from aes import encrypt_cfb, decrypt_cfb
 
 def generate_key_pair():
     """Tạo cặp khóa RSA (public key và private key)."""
@@ -71,9 +71,7 @@ def encrypt_file(file_path: str, public_key, output_path: str) -> None:
 
     # Mã hóa nội dung file bằng AES
     iv = os.urandom(16)  # Khởi tạo vector IV
-    cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
-    encryptor = cipher.encryptor()
-    ciphertext = encryptor.update(plaintext) + encryptor.finalize()
+    ciphertext = encrypt_cfb(plaintext, key, iv)
 
     # Mã hóa key AES bằng public key RSA
     encrypted_key = public_key.encrypt(
@@ -112,10 +110,8 @@ def decrypt_file(file_path: str, private_key, output_path: str) -> None:
         )
     )
 
-    # Giải mã nội dung file bằng AES
-    cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
-    decryptor = cipher.decryptor()
-    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+    # Giải mã nội dung file bằng AES-CFB
+    plaintext = decrypt_cfb(ciphertext, key, iv)
 
     # Lưu file gốc
     with open(output_path, 'wb') as f:
