@@ -1,9 +1,15 @@
 import ctypes
 import os
+import platform
 
 # Load thư viện C
-lib_path = os.path.abspath("aes.so")  # Trên Windows đổi thành "aes.dll"
-aes = ctypes.CDLL(lib_path)
+# Chọn thư viện phù hợp
+if platform.system() == "Windows":
+    lib_path = os.path.abspath("aes.dll")  # Windows dùng DLL
+else:
+    lib_path = os.path.abspath("aes.so")   # Linux dùng SO
+
+aes = ctypes.CDLL(lib_path)  # Load thư viện C
 
 # Khai báo kiểu dữ liệu
 aes.encrypt_cfb.argtypes = (
