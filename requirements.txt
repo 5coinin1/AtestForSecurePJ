@@ -9,3 +9,4 @@ customtkinter
 Pillow
 python-dotenv
 Flask-Limiter
+redis

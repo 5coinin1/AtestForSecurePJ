@@ -12,11 +12,20 @@ from file_services import load_public_key
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from redis import Redis
 
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["100 per minute"])
+REDIS_URL = os.getenv("REDIS_URL")
+
+# Cấu hình Flask-Limiter với Redis
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    storage_uri=REDIS_URL,
+    default_limits=["100 per minute"]
+)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
