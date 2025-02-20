@@ -5,7 +5,7 @@ from file_services import upload_file, download_file, generate_keys_ui
 def create_gui():
     ctk.set_appearance_mode("dark")
     root = ctk.CTk()
-    root.title("Ứng dụng Tải Lên và Tải Xuống File")
+    root.title("Ứng dụng Mã Hóa Và Lưu Trữ FILE")
     root.geometry("400x300")
 
     frame = ctk.CTkFrame(root)

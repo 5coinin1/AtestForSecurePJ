@@ -33,6 +33,24 @@ void ShiftRows(uint8_t state[AES_BLOCK_SIZE]) {
     temp = state[3]; state[3] = state[15]; state[15] = state[11]; state[11] = state[7]; state[7] = temp;
 }
 
+uint8_t xtime(uint8_t x) {
+    return (x << 1) ^ ((x >> 7) * 0x1b);
+}
+
+void MixColumns(uint8_t state[AES_BLOCK_SIZE]) {
+    for (int i = 0; i < 4; i++) {
+        uint8_t *col = &state[i * 4];
+        uint8_t t = col[0] ^ col[1] ^ col[2] ^ col[3];
+
+        uint8_t tmp0 = col[0];
+        col[0] ^= t ^ xtime(col[0] ^ col[1]);
+        col[1] ^= t ^ xtime(col[1] ^ col[2]);
+        col[2] ^= t ^ xtime(col[2] ^ col[3]);
+        col[3] ^= t ^ xtime(col[3] ^ tmp0);
+    }
+}
+
+
 void AddRoundKey(uint8_t state[AES_BLOCK_SIZE], uint8_t roundKey[AES_BLOCK_SIZE]) {
     for (int i = 0; i < AES_BLOCK_SIZE; i++) {
         state[i] ^= roundKey[i];
@@ -70,12 +88,23 @@ void AES_Encrypt(uint8_t input[AES_BLOCK_SIZE], uint8_t key[AES_KEY_SIZE], uint8
     uint8_t roundKeys[AES_EXPANDED_KEY_SIZE];
     KeyExpansion(key, roundKeys);
     memcpy(state, input, AES_BLOCK_SIZE);
+
+    // Vòng đầu tiên
     AddRoundKey(state, roundKeys);
+
+    // Vòng lặp chính
     for (int round = 1; round < AES_ROUNDS; round++) {
         SubBytes(state);
         ShiftRows(state);
+        MixColumns(state);
         AddRoundKey(state, roundKeys + round * AES_BLOCK_SIZE);
     }
+
+    // Vòng cuối không dùng MixColumns
+    SubBytes(state);
+    ShiftRows(state);
+    AddRoundKey(state, roundKeys + AES_ROUNDS * AES_BLOCK_SIZE);
+
     memcpy(output, state, AES_BLOCK_SIZE);
 }
 
