@@ -8,3 +8,4 @@ pyperclip
 customtkinter
 Pillow
 python-dotenv
+Flask-Limiter

@@ -10,8 +10,14 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from file_services import load_public_key
 
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 # Cấu hình ứng dụng Flask và kết nối với cơ sở dữ liệu PostgreSQL
 app = Flask(__name__)
+
+limiter = Limiter(get_remote_address, app=app, default_limits=["100 per minute"])
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
@@ -41,6 +47,7 @@ def safe_filename(filename):
     return secure_filename(filename).encode('utf-8').decode('utf-8')
 
 @app.route('/upload', methods=['POST'])
+@limiter.limit("10 per minute")
 def upload_file():
     if 'file' not in request.files:
         return jsonify({"error": "Không có file trong yêu cầu"}), 400
@@ -70,6 +77,7 @@ def upload_file():
 
 
 @app.route('/download', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def download_file():
     if request.method == 'POST':
         file_key = request.form.get('key')
