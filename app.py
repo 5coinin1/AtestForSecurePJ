@@ -27,7 +27,7 @@ limiter = Limiter(
     default_limits=["100 per minute"]
 )
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')  # Sẽ hết hạn vào 21/2
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
